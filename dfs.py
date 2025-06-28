@@ -8,13 +8,13 @@ def fetch_sleeper_players():
     sleeper_data = sleeper_API.text 
     json_sleeper_data = json.loads(sleeper_data)
     # Pulling player names and projections
-    sleeper_players = []
+    sleeper_players = {}
     for item in json_sleeper_data:
         projection = item['stats'].get('pts_ppr')
         if projection and item['player']['position'] == 'DEF': 
-            sleeper_players.append({item['player']['last_name']: projection})
+            sleeper_players.update({item['player']['last_name']: projection})
         elif projection: 
-            sleeper_players.append({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
+            sleeper_players.update({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
     return(sleeper_players)
 
 def fetch_dk_players(): 
@@ -30,17 +30,17 @@ def fetch_dk_players():
         if item['draftStatAttributes'][0].get('id') == 90:                
             if index != len(json_dk_data['draftables'])-1 and item['playerId'] != json_dk_data['draftables'][index + 1]['playerId']:
                 # Finding matching sleeper player projection
-                for m in sleeper_players:
-                    if item['displayName'] in m:
+                for key, value in sleeper_players.items():
+                    if item['displayName'] == key or item['displayName'][:15] == key[:15]:
                         # Adding player to all players, salaries, and projections 
-                        info = {'name': item['displayName'], 'position': item['position'], 'salary': item['salary'], 'projection': m[item['displayName']]}
+                        info = {'name': item['displayName'], 'position': item['position'], 'salary': item['salary'], 'projection': value}
                         salaries[item['position']].update({item['displayName']: item['salary']})
-                        projections[item['position']].update({item['displayName']: m[item['displayName']]})
+                        projections[item['position']].update({item['displayName']: value})
                         dk_players.append(info)
                         # Adding flex player 
                         if item['position'] in ('RB', 'WR', 'TE'):
                             salaries['FLEX'].update({item['displayName']: item['salary']})
-                            projections['FLEX'].update({item['displayName']: m[item['displayName']]})
+                            projections['FLEX'].update({item['displayName']: value})
     # Setting position and salary constraints
     pos_max = {
         'QB': 1,
@@ -66,5 +66,4 @@ def fetch_dk_players():
     for v in prob.variables():
         if v.varValue == 1:
             print(f"{v.name} = {v.varValue}")
-
 fetch_dk_players()
