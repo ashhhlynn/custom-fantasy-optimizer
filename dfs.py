@@ -33,16 +33,26 @@ def fetch_dk_players():
                 for key, value in sleeper_players.items():
                     if item['displayName'] == key or item['displayName'][:15] == key[:15]:
                         # Adding player to all players, salaries, and projections 
-                        info = {'name': item['displayName'], 'position': item['position'], 'salary': item['salary'], 'projection': value}
+                        info = {'num': index, 'name': item['displayName'], 'position': item['position'], 'salary': item['salary'], 'projection': value}
                         salaries[item['position']].update({item['displayName']: item['salary']})
                         projections[item['position']].update({item['displayName']: value})
                         dk_players.append(info)
                         # Adding flex player 
                         if item['position'] in ('RB', 'WR', 'TE'):
+                            new_info = {'num': index, 'name': item['displayName'], 'position': 'FLEX', 'salary': item['salary'], 'projection': value}
                             salaries['FLEX'].update({item['displayName']: item['salary']})
                             projections['FLEX'].update({item['displayName']: value})
+                            dk_players.append(new_info)
     # Setting position and salary constraints
     pos_max = {
+        'QB': 1,
+        'RB': 3,
+        'WR': 4,
+        'TE': 2,
+        'FLEX': 1,
+        'DST': 1
+    }
+    pos_min = {
         'QB': 1,
         'RB': 2,
         'WR': 3,
@@ -51,19 +61,25 @@ def fetch_dk_players():
         'DST': 1
     }
     salary_max = 50000
+    total_players = 9
     # Setting up and solving problem 
     prob = LpProblem("Optimize DFS", LpMaximize)
     _vars = {k: LpVariable.dict(k, v, cat="Binary") for k, v in projections.items()}    
     points = []
     prices = []
+    num_players = 0
     for k, v in _vars.items():
         prices += lpSum([salaries[k][i] * _vars[k][i] for i in v])
         points += lpSum([projections[k][i] * _vars[k][i] for i in v])
-        prob += lpSum([_vars[k][i] for i in v]) <= pos_max[k]
+        prob +=  lpSum([_vars[k][i] for i in v]) <= pos_max[k] 
+        prob +=  lpSum([_vars[k][i] for i in v]) >= pos_min[k] 
+        num_players +=  1
+    prob += lpSum(num_players) == total_players
     prob += lpSum(points)
     prob += lpSum(prices) <= salary_max
     prob.solve()
     for v in prob.variables():
         if v.varValue == 1:
             print(f"{v.name} = {v.varValue}")
+    print({pulp.value(prob.objective)})
 fetch_dk_players()
