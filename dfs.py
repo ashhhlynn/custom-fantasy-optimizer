@@ -24,8 +24,8 @@ def fetch_dk_players():
     json_dk_data = json.loads(dk_data)
     sleeper_players = fetch_sleeper_players()    
     dk_players = []
-    salaries = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'FLEX':{}, 'DST':{}}
-    projections = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'FLEX':{}, 'DST':{}}
+    salaries = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'DST':{}}
+    projections = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'DST':{}}
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90:                
             if index != len(json_dk_data['draftables'])-1 and item['playerId'] != json_dk_data['draftables'][index + 1]['playerId']:
@@ -40,8 +40,6 @@ def fetch_dk_players():
                         # Adding flex player 
                         if item['position'] in ('RB', 'WR', 'TE'):
                             new_info = {'num': index, 'name': item['displayName'], 'position': 'FLEX', 'salary': item['salary'], 'projection': value}
-                            salaries['FLEX'].update({item['displayName']: item['salary']})
-                            projections['FLEX'].update({item['displayName']: value})
                             dk_players.append(new_info)
     # Setting position and salary constraints
     pos_max = {
@@ -49,7 +47,6 @@ def fetch_dk_players():
         'RB': 3,
         'WR': 4,
         'TE': 2,
-        'FLEX': 0,
         'DST': 1
     }
     salary_max = 50000
@@ -64,7 +61,6 @@ def fetch_dk_players():
         'RB': 1,
         'WR': 1,
         'TE': 1,
-        'FLEX': 0,
         'DST': 0
     }
     for k, v in _vars.items():
