@@ -77,15 +77,15 @@ def fetch_dk_players():
     sal_used = 0
     for v in prob.variables():
         if v.varValue == 1:
-            flex_abbr = v.name[:2]
             parts = v.name.split('_')
-            sal = salaries[parts[0]][' '.join(parts[1:])]
-            proj = projections[parts[0]][' '.join(parts[1:])]
+            pos = parts[0]
+            sal = salaries[pos][' '.join(parts[1:])]
+            proj = projections[pos][' '.join(parts[1:])]
             sal_used += sal
-            if flex_abbr in ['RB', 'WR', 'TE'] and flex_count[flex_abbr] == pos_max[flex_abbr] - 1:
+            if pos in ['RB', 'WR', 'TE'] and flex_count[pos] == pos_max[pos] - 1:
                 print(f"FLEX_{v.name} - Salary ${sal}, Projection {proj} ")
-            elif flex_abbr in ['RB', 'WR', 'TE']:
-                flex_count[flex_abbr] += 1
+            elif pos in ['RB', 'WR', 'TE']:
+                flex_count[pos] += 1
                 print(f"{v.name} - Salary ${sal}, Projection {proj}")
             else:
                 print(f"{v.name} - Salary ${sal}, Projection {proj}")
