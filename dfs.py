@@ -74,12 +74,14 @@ def fetch_dk_players():
     prob.solve()
     # Displaying optimizer results
     flex_count = {'RB': 0, 'WR': 0, 'TE': 0}
+    sal_used = 0
     for v in prob.variables():
         if v.varValue == 1:
             flex_abbr = v.name[:2]
             parts = v.name.split('_')
             sal = salaries[parts[0]][' '.join(parts[1:])]
             proj = projections[parts[0]][' '.join(parts[1:])]
+            sal_used += sal
             if flex_abbr in ['RB', 'WR', 'TE'] and flex_count[flex_abbr] == pos_max[flex_abbr] - 1:
                 print(f"FLEX_{v.name} - Salary ${sal}, Projection {proj} ")
             elif flex_abbr in ['RB', 'WR', 'TE']:
@@ -87,5 +89,6 @@ def fetch_dk_players():
                 print(f"{v.name} - Salary ${sal}, Projection {proj}")
             else:
                 print(f"{v.name} - Salary ${sal}, Projection {proj}")
-    print({pulp.value(prob.objective)})
+    print(f"Projected Total: {pulp.value(prob.objective)}")
+    print(f"Remaining Salary: ${50000-sal_used}")
 fetch_dk_players()
