@@ -16,7 +16,7 @@ def fetch_sleeper_players():
             sleeper_players.update({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
     return(sleeper_players)
 
-def fetch_dk_players(): 
+def fetch_dk_players(flex_req_input): 
     # Fetch contest data from DraftKings API. 
     dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/98582/draftables')
     json_dk_data = json.loads(dk_API.text)
@@ -62,16 +62,24 @@ def fetch_dk_players():
         'TE': 1,
         'DST': 0
     }
+    flex_req_total = []
     # Loop through PuLP variable to calculate salary, projection, and position totals. 
     for k, v in _vars.items():
         salary_total += lpSum([salaries[k][i] * _vars[k][i] for i in v])
         projection_total += lpSum([projections[k][i] * _vars[k][i] for i in v])
         flex_total += lpSum([flex_pos[k] * _vars[k][i] for i in v]) 
         # Define PuLP constraint for maximum number of players per position. 
-        prob +=  lpSum([_vars[k][i] for i in v]) <= pos_max[k] 
+        prob += lpSum([_vars[k][i] for i in v]) <= pos_max[k] 
+        # Require position for flex if specified and update PuLP constraints for number of players per position.
+        if flex_req_input and k == flex_req_input:
+            flex_req_total += lpSum([flex_pos[k] * _vars[k][i] for i in v])
+        elif flex_req_input and k in ['RB', 'WR', 'TE']:
+            prob +=  lpSum([_vars[k][i] for i in v]) <= pos_max[k] - 1
+    if flex_req_input:
+        prob += lpSum(flex_req_total) == pos_max[flex_req_input]
     # Define PuLP constraints for maximum salary and number of flex players. 
     prob += lpSum(salary_total) <= salary_max
-    prob += lpSum(flex_total) == 7
+    prob += lpSum(flex_total) == 7    
     # Define PuLP objective to maximize total projection and solve. 
     prob += lpSum(projection_total)
     prob.solve()
@@ -95,4 +103,6 @@ def fetch_dk_players():
                 print(f"{v.name} - Salary ${sal}, Projection {proj}")
     print(f"Projected Total: {pulp.value(prob.objective)}")
     print(f"Remaining Salary: ${50000-sal_used}")
-fetch_dk_players()
+# Option to require specific position for flex.
+flex_req_input = 'TE'
+fetch_dk_players(flex_req_input)
