@@ -102,5 +102,5 @@ def fetch_dk_players(flex_req_input):
     print(f"Projected Total: {pulp.value(prob.objective)}")
     print(f"Remaining Salary: ${50000-salary_total.value()}")
 # Option to require specific position for flex.
-flex_req_input = 'RB'
+flex_req_input = 'TE'
 fetch_dk_players(flex_req_input)
