@@ -74,7 +74,7 @@ def fetch_dk_players(flex_req_input):
         if flex_req_input and k == flex_req_input:
             flex_req_total += lpSum([flex_pos[k] * _vars[k][i] for i in v])
         elif flex_req_input and k in ['RB', 'WR', 'TE']:
-            prob +=  lpSum([_vars[k][i] for i in v]) <= pos_max[k] - 1
+            prob += lpSum([_vars[k][i] for i in v]) <= pos_max[k] - 1
     if flex_req_input:
         prob += lpSum(flex_req_total) == pos_max[flex_req_input]
     # Define PuLP constraints for maximum salary and number of flex players. 
@@ -84,15 +84,13 @@ def fetch_dk_players(flex_req_input):
     prob += lpSum(projection_total)
     prob.solve()
     # Print PuLP results of players with salaries and projections. 
-    flex_count = {'RB': 0, 'WR': 0, 'TE': 0}
-    sal_used = 0
+    flex_count = {'RB': 0, 'WR': 0, 'TE': 0}    
     for v in prob.variables():
         if v.varValue == 1:
             parts = v.name.split('_')
             pos = parts[0]
             sal = salaries[pos][' '.join(parts[1:])]
-            proj = projections[pos][' '.join(parts[1:])]
-            sal_used += sal
+            proj = projections[pos][' '.join(parts[1:])]    
             # Label flex if RB, WR, or TE player count reaches position maximum. 
             if pos in ['RB', 'WR', 'TE'] and flex_count[pos] == pos_max[pos] - 1:
                 print(f"FLEX_{v.name} - Salary ${sal}, Projection {proj} ")
@@ -102,7 +100,7 @@ def fetch_dk_players(flex_req_input):
             else:
                 print(f"{v.name} - Salary ${sal}, Projection {proj}")
     print(f"Projected Total: {pulp.value(prob.objective)}")
-    print(f"Remaining Salary: ${50000-sal_used}")
+    print(f"Remaining Salary: ${50000-salary_total.value()}")
 # Option to require specific position for flex.
-flex_req_input = 'TE'
+flex_req_input = 'RB'
 fetch_dk_players(flex_req_input)
