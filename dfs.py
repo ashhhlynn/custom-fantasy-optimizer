@@ -76,8 +76,17 @@ def fetch_dk_players():
     prob += lpSum(points)
     prob += lpSum(prices) <= salary_max
     prob.solve()
+    # Displaying optimizer results
+    flex_count = {'RB': 0, 'WR': 0, 'TE': 0}
     for v in prob.variables():
         if v.varValue == 1:
-            print(f"{v.name} = {v.varValue}")
+            flex_abbr = v.name[:2]
+            if flex_abbr in ['RB', 'WR', 'TE'] and flex_count[flex_abbr] == pos_max[flex_abbr] - 1:
+                print(f"FLEX_{v.name} = {v.varValue}")
+            elif flex_abbr in ['RB', 'WR', 'TE']:
+                flex_count[flex_abbr] += 1
+                print(f"{v.name} = {v.varValue}")
+            else:
+                print(f"{v.name} = {v.varValue}")
     print({pulp.value(prob.objective)})
 fetch_dk_players()
