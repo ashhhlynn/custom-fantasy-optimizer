@@ -3,11 +3,11 @@ import json
 from pulp import *
 
 def fetch_sleeper_players():
-    # Fetching sleeper API
+    # Fetch projections from sleeper API.
     sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2023/18?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
     sleeper_data = sleeper_API.text 
     json_sleeper_data = json.loads(sleeper_data)
-    # Pulling player names and projections
+    # Create dictionary of player names and projections.
     sleeper_players = {}
     for item in json_sleeper_data:
         projection = item['stats'].get('pts_ppr')
@@ -18,30 +18,33 @@ def fetch_sleeper_players():
     return(sleeper_players)
 
 def fetch_dk_players(): 
-    # Fetching draftkings API 
+    # Fetch contest data from DraftKings API. 
     dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/98582/draftables')
     dk_data = dk_API.text 
     json_dk_data = json.loads(dk_data)
-    sleeper_players = fetch_sleeper_players()    
+    sleeper_players = fetch_sleeper_players()   
     dk_players = []
     salaries = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'DST':{}}
     projections = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'DST':{}}
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90:                
             if index != len(json_dk_data['draftables'])-1 and item['playerId'] != json_dk_data['draftables'][index + 1]['playerId']:
-                # Finding matching sleeper player projection
+                # Match sleeper projection to player.
                 for key, value in sleeper_players.items():
                     if item['displayName'] == key or item['displayName'][:15] == key[:15]:
-                        # Adding player to all players, salaries, and projections 
+                        # Add player to salary and projection dictionaries. 
                         info = {'num': index, 'name': item['displayName'], 'position': item['position'], 'salary': item['salary'], 'projection': value}
+                        dk_players.append(info)
                         salaries[item['position']].update({item['displayName']: item['salary']})
                         projections[item['position']].update({item['displayName']: value})
-                        dk_players.append(info)
-                        # Adding flex player 
+                        # Add flex player duplicate. 
                         if item['position'] in ('RB', 'WR', 'TE'):
                             new_info = {'num': index, 'name': item['displayName'], 'position': 'FLEX', 'salary': item['salary'], 'projection': value}
                             dk_players.append(new_info)
-    # Setting position and salary constraints
+    # Define PuLP optimizer problem and variables. 
+    prob = LpProblem("Optimize DFS", LpMaximize)
+    _vars = {k: LpVariable.dict(k, v, cat="Binary") for k, v in projections.items()}   
+    # Set constraint and sum variables for position, salary, and projection. 
     pos_max = {
         'QB': 1,
         'RB': 3,
@@ -50,11 +53,8 @@ def fetch_dk_players():
         'DST': 1
     }
     salary_max = 50000
-    # Setting up and solving problem 
-    prob = LpProblem("Optimize DFS", LpMaximize)
-    _vars = {k: LpVariable.dict(k, v, cat="Binary") for k, v in projections.items()}    
-    points = []
     prices = []
+    points = []
     flex_total = []
     flex_pos = {
         'QB': 0,
@@ -63,6 +63,7 @@ def fetch_dk_players():
         'TE': 1,
         'DST': 0
     }
+    # Get salary, projection, and position totals and define PuLP optimizer constraints.
     for k, v in _vars.items():
         prices += lpSum([salaries[k][i] * _vars[k][i] for i in v])
         points += lpSum([projections[k][i] * _vars[k][i] for i in v])
@@ -71,8 +72,9 @@ def fetch_dk_players():
     prob += lpSum(flex_total) == 7
     prob += lpSum(points)
     prob += lpSum(prices) <= salary_max
+    # Solve PuLP optimizer. 
     prob.solve()
-    # Displaying optimizer results
+    # Print PuLP optimizer results of players with salaries and projections. 
     flex_count = {'RB': 0, 'WR': 0, 'TE': 0}
     sal_used = 0
     for v in prob.variables():
