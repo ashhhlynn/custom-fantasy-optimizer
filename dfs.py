@@ -49,32 +49,30 @@ def fetch_dk_players():
         'RB': 3,
         'WR': 4,
         'TE': 2,
-        'FLEX': 1,
-        'DST': 1
-    }
-    pos_min = {
-        'QB': 1,
-        'RB': 2,
-        'WR': 3,
-        'TE': 1,
-        'FLEX': 1,
+        'FLEX': 0,
         'DST': 1
     }
     salary_max = 50000
-    total_players = 9
     # Setting up and solving problem 
     prob = LpProblem("Optimize DFS", LpMaximize)
     _vars = {k: LpVariable.dict(k, v, cat="Binary") for k, v in projections.items()}    
     points = []
     prices = []
-    num_players = 0
+    flex_total = []
+    flex_pos = {
+        'QB': 0,
+        'RB': 1,
+        'WR': 1,
+        'TE': 1,
+        'FLEX': 0,
+        'DST': 0
+    }
     for k, v in _vars.items():
         prices += lpSum([salaries[k][i] * _vars[k][i] for i in v])
         points += lpSum([projections[k][i] * _vars[k][i] for i in v])
         prob +=  lpSum([_vars[k][i] for i in v]) <= pos_max[k] 
-        prob +=  lpSum([_vars[k][i] for i in v]) >= pos_min[k] 
-        num_players +=  1
-    prob += lpSum(num_players) == total_players
+        flex_total += lpSum([flex_pos[k] * _vars[k][i] for i in v]) 
+    prob += lpSum(flex_total) == 7
     prob += lpSum(points)
     prob += lpSum(prices) <= salary_max
     prob.solve()
