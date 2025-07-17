@@ -52,8 +52,8 @@ def fetch_dk_players():
         'DST': 1
     }
     salary_max = 50000
-    prices = []
-    points = []
+    salary_total = []
+    projection_total = []
     flex_total = []
     flex_pos = {
         'QB': 0,
@@ -64,16 +64,16 @@ def fetch_dk_players():
     }
     # Loop through PuLP variable to calculate salary, projection, and position totals. 
     for k, v in _vars.items():
-        prices += lpSum([salaries[k][i] * _vars[k][i] for i in v])
-        points += lpSum([projections[k][i] * _vars[k][i] for i in v])
+        salary_total += lpSum([salaries[k][i] * _vars[k][i] for i in v])
+        projection_total += lpSum([projections[k][i] * _vars[k][i] for i in v])
         flex_total += lpSum([flex_pos[k] * _vars[k][i] for i in v]) 
         # Define PuLP constraint for maximum number of players per position. 
         prob +=  lpSum([_vars[k][i] for i in v]) <= pos_max[k] 
     # Define PuLP constraints for maximum salary and number of flex players. 
-    prob += lpSum(prices) <= salary_max
+    prob += lpSum(salary_total) <= salary_max
     prob += lpSum(flex_total) == 7
     # Define PuLP objective to maximize total projection and solve. 
-    prob += lpSum(points)
+    prob += lpSum(projection_total)
     prob.solve()
     # Print PuLP results of players with salaries and projections. 
     flex_count = {'RB': 0, 'WR': 0, 'TE': 0}
