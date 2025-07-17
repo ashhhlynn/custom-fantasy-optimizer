@@ -5,8 +5,7 @@ from pulp import *
 def fetch_sleeper_players():
     # Fetch projections from sleeper API.
     sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2023/18?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
-    sleeper_data = sleeper_API.text 
-    json_sleeper_data = json.loads(sleeper_data)
+    json_sleeper_data = json.loads(sleeper_API.text)
     # Create dictionary of player names and projections.
     sleeper_players = {}
     for item in json_sleeper_data:
@@ -20,12 +19,12 @@ def fetch_sleeper_players():
 def fetch_dk_players(): 
     # Fetch contest data from DraftKings API. 
     dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/98582/draftables')
-    dk_data = dk_API.text 
-    json_dk_data = json.loads(dk_data)
+    json_dk_data = json.loads(dk_API.text)
     sleeper_players = fetch_sleeper_players()   
     dk_players = []
     salaries = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'DST':{}}
     projections = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'DST':{}}
+    # Loop through players and skip duplicates. 
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90:                
             if index != len(json_dk_data['draftables'])-1 and item['playerId'] != json_dk_data['draftables'][index + 1]['playerId']:
@@ -41,10 +40,10 @@ def fetch_dk_players():
                         if item['position'] in ('RB', 'WR', 'TE'):
                             new_info = {'num': index, 'name': item['displayName'], 'position': 'FLEX', 'salary': item['salary'], 'projection': value}
                             dk_players.append(new_info)
-    # Define PuLP optimizer problem and variables. 
+    # Define PuLP problem and variable. 
     prob = LpProblem("Optimize DFS", LpMaximize)
     _vars = {k: LpVariable.dict(k, v, cat="Binary") for k, v in projections.items()}   
-    # Set constraint and sum variables for position, salary, and projection. 
+    # Set constraint and sum variables for player positions, salaries, and projections. 
     pos_max = {
         'QB': 1,
         'RB': 3,
@@ -63,18 +62,20 @@ def fetch_dk_players():
         'TE': 1,
         'DST': 0
     }
-    # Get salary, projection, and position totals and define PuLP optimizer constraints.
+    # Loop through PuLP variable to calculate salary, projection, and position totals. 
     for k, v in _vars.items():
         prices += lpSum([salaries[k][i] * _vars[k][i] for i in v])
         points += lpSum([projections[k][i] * _vars[k][i] for i in v])
-        prob +=  lpSum([_vars[k][i] for i in v]) <= pos_max[k] 
         flex_total += lpSum([flex_pos[k] * _vars[k][i] for i in v]) 
-    prob += lpSum(flex_total) == 7
-    prob += lpSum(points)
+        # Define PuLP constraint for maximum number of players per position. 
+        prob +=  lpSum([_vars[k][i] for i in v]) <= pos_max[k] 
+    # Define PuLP constraints for maximum salary and number of flex players. 
     prob += lpSum(prices) <= salary_max
-    # Solve PuLP optimizer. 
+    prob += lpSum(flex_total) == 7
+    # Define PuLP objective to maximize total projection and solve. 
+    prob += lpSum(points)
     prob.solve()
-    # Print PuLP optimizer results of players with salaries and projections. 
+    # Print PuLP results of players with salaries and projections. 
     flex_count = {'RB': 0, 'WR': 0, 'TE': 0}
     sal_used = 0
     for v in prob.variables():
@@ -84,6 +85,7 @@ def fetch_dk_players():
             sal = salaries[pos][' '.join(parts[1:])]
             proj = projections[pos][' '.join(parts[1:])]
             sal_used += sal
+            # Label flex if RB, WR, or TE player count reaches position maximum. 
             if pos in ['RB', 'WR', 'TE'] and flex_count[pos] == pos_max[pos] - 1:
                 print(f"FLEX_{v.name} - Salary ${sal}, Projection {proj} ")
             elif pos in ['RB', 'WR', 'TE']:
