@@ -16,7 +16,7 @@ def fetch_sleeper_players():
             sleeper_players.update({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
     return(sleeper_players)
 
-def fetch_dk_players(flex_req_input): 
+def fetch_dk_players(): 
     # Fetch contest data from DraftKings API. 
     dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/98582/draftables')
     json_dk_data = json.loads(dk_API.text)
@@ -33,16 +33,20 @@ def fetch_dk_players(flex_req_input):
                 for key, value in sleeper_players.items():
                     if item['displayName'] == key or item['displayName'][:15] == key[:15]:
                         # Add player to salary and projection dictionaries. 
-                        info = {str(index): {'count': 1, 'name': item['displayName'], 'position': item['position'], item['position']: 1, 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': value}}
+                        info = {str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': value}}
                         dk_players.update(info)
                         salaries[item['position']].update({item['displayName']: item['salary']})
                         projections[item['position']].update({item['displayName']: value})
                         # Add flex player duplicate. 
                         if item['position'] in ('RB', 'WR', 'TE'):
-                            new_info = {str(index+10000): {'count': 1, 'name': item['displayName'], 'position': 'FLEX', 'FLEX': 1, 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': value}}
+                            new_info = {str(index+10000): {'name': item['displayName'], 'position': 'FLEX', 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': value}}
                             flex_players.update(new_info)
+    return dk_players
+
+def optimize_dk_players(flex_req_input):
+    dk_players = fetch_dk_players()  
     # Define PuLP problem and variable. 
-    prob = LpProblem('Optimize DFS', LpMaximize)
+    prob = LpProblem('Optimize', LpMaximize)
     player_vars = LpVariable.dicts('Select', dk_players.keys(), 0, 1, cat='Binary')
     # Set constraint and sum variables for player positions, salaries, and projections. 
     pos_max = {
@@ -52,18 +56,6 @@ def fetch_dk_players(flex_req_input):
         'TE': 2,
         'DST': 1
     }
-    salary_max = 50000
-    salary_total = []
-    projection_total = []
-    flex_total = []
-    flex_pos = {
-        'QB': 0,
-        'RB': 1,
-        'WR': 1,
-        'TE': 1,
-        'DST': 0
-    }
-    flex_req_total = []
     # Define PuLP constraints for maximum salary and players per position. 
     prob += lpSum(dk_players[p]["salary"] * player_vars[p] for p in dk_players) <= 50000
     prob += lpSum(player_vars[p] for p in dk_players) == 9  
@@ -96,4 +88,4 @@ def fetch_dk_players(flex_req_input):
 
 # Option to require specific position for flex.
 flex_req_input = 'RB'
-fetch_dk_players(flex_req_input)
+optimize_dk_players(flex_req_input)
