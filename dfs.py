@@ -59,13 +59,13 @@ def optimize_dk_players(flex_req_input):
     # Define PuLP constraints for maximum salary and players per position. 
     prob += lpSum(dk_players[p]["salary"] * player_vars[p] for p in dk_players) <= 50000
     prob += lpSum(player_vars[p] for p in dk_players) == 9  
+    prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
     for pos, max_count in pos_max.items():
         prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) <= max_count
-        prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) <= 7  
         # Require position for flex if specified and update PuLP constraints for players per flex position.
-        if flex_req_input and flex_req_input == pos:
+        if flex_req_input in ["RB", "WR", "TE"] and flex_req_input == pos:
             prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == flex_req_input]) == max_count
-        elif flex_req_input and pos in ["RB", "WR", "TE"]:
+        elif flex_req_input in ["RB", "WR", "TE"] and pos in ["RB", "WR", "TE"]:
             prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) == max_count - 1    
     # Define PuLP objective to maximize total projection and solve. 
     prob += lpSum(dk_players[p]["projection"] * player_vars[p] for p in dk_players)
