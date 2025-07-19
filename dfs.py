@@ -23,24 +23,17 @@ def fetch_dk_players():
     sleeper_players = fetch_sleeper_players()       
     dk_players = {}
     flex_players = {}
-    salaries = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'DST':{}}
-    projections = {'QB':{}, 'RB':{}, 'WR':{}, 'TE':{}, 'DST':{}}
     # Loop through players and skip duplicates. 
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90:                
             if index != len(json_dk_data['draftables'])-1 and item['playerId'] != json_dk_data['draftables'][index + 1]['playerId']:
                 # Match sleeper projection to player.
-                for key, value in sleeper_players.items():
-                    if item['displayName'] == key or item['displayName'][:15] == key[:15]:
-                        # Add player to salary and projection dictionaries. 
-                        info = {str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': value}}
-                        dk_players.update(info)
-                        salaries[item['position']].update({item['displayName']: item['salary']})
-                        projections[item['position']].update({item['displayName']: value})
-                        # Add flex player duplicate. 
-                        if item['position'] in ('RB', 'WR', 'TE'):
-                            new_info = {str(index+10000): {'name': item['displayName'], 'position': 'FLEX', 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': value}}
-                            flex_players.update(new_info)
+                sleeper = sleeper_players[item['displayName']] if item['displayName'] in sleeper_players else (sleeper if item['displayName'][:15] in sleeper_players else 0)
+                info = {str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': sleeper}}
+                dk_players.update(info)
+                if item['position'] in ('RB', 'WR', 'TE'):
+                    new_info = {str(index+10000): {'name': item['displayName'], 'position': 'FLEX', 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': sleeper}}
+                    flex_players.update(new_info)
     return dk_players
 
 def optimize_dk_players(flex_req_input):
@@ -85,7 +78,7 @@ def optimize_dk_players(flex_req_input):
                 print(f"{pos} {dk_players[player]['name']} ({player}) - ${dk_players[player]['salary']} - {dk_players[player]['projection']}")
     print("Total Projection:", pulp.value(prob.objective))
     print("Remaining Salary:", 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players))
-
+    
 # Option to require specific position for flex.
 flex_req_input = 'RB'
 optimize_dk_players(flex_req_input)
