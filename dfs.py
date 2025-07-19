@@ -26,9 +26,9 @@ def fetch_dk_players():
     # Loop through players and skip duplicates. 
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90:                
-            if index != len(json_dk_data['draftables'])-1 and item['playerId'] != json_dk_data['draftables'][index + 1]['playerId']:
+            if index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']:
                 # Match sleeper projection to player.
-                sleeper = sleeper_players[item['displayName']] if item['displayName'] in sleeper_players else (sleeper if item['displayName'][:15] in sleeper_players else 0)
+                sleeper = sleeper_players[item['displayName']] if item['displayName'] in sleeper_players else (sleeper_players.get(item['displayName'][:15]) if item['displayName'][:15] in sleeper_players else 0)
                 info = {str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': sleeper}}
                 dk_players.update(info)
                 if item['position'] in ('RB', 'WR', 'TE'):
@@ -78,7 +78,7 @@ def optimize_dk_players(flex_req_input):
                 print(f"{pos} {dk_players[player]['name']} ({player}) - ${dk_players[player]['salary']} - {dk_players[player]['projection']}")
     print("Total Projection:", pulp.value(prob.objective))
     print("Remaining Salary:", 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players))
-    
+
 # Option to require specific position for flex.
 flex_req_input = 'RB'
 optimize_dk_players(flex_req_input)
