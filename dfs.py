@@ -33,7 +33,7 @@ def fetch_dk_players():
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': sleeper_players[item['displayName'][:15]]}})
     return dk_players
 
-def optimize_dk_players(flex_req_input):
+def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input):
     dk_players = fetch_dk_players()  
     # Define PuLP problem and variable. 
     prob = LpProblem('Optimize', LpMaximize)
@@ -46,6 +46,13 @@ def optimize_dk_players(flex_req_input):
         'TE': 2,
         'DST': 1
     }
+    # Require inclusion or exclusion of players if specified.
+    if incl_req_input:
+        for p in incl_req_input:
+            player_vars[p].lowBound = 1
+    if excl_req_input:
+        for p in excl_req_input:
+            player_vars[p].upBound = 0
     prob += lpSum(dk_players[p]["salary"] * player_vars[p] for p in dk_players) <= 50000
     prob += lpSum(player_vars[p] for p in dk_players) == 9  
     prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
@@ -75,6 +82,9 @@ def optimize_dk_players(flex_req_input):
     print("Total Projection:", pulp.value(prob.objective))
     print("Remaining Salary:", 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players))
 
+# Option to require inclusion or exclusion of specific players. 
+incl_req_input = ['58', '8', '693']
+excl_req_input = ['514']
 # Option to require specific position for flex.
 flex_req_input = 'RB'
-optimize_dk_players(flex_req_input)
+optimize_dk_players(flex_req_input, incl_req_input, excl_req_input)
