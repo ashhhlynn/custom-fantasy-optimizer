@@ -26,14 +26,16 @@ def fetch_dk_players():
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90:                
             if index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']:
+                parts = item['competition']['name'].split('@')
+                opp = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
                 # Match sleeper projection to player.
                 if item['displayName'] in sleeper_players:
-                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': sleeper_players[item['displayName']]}})
+                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'projection': sleeper_players[item['displayName']]}})
                 elif item['displayName'][:15] in sleeper_players:
-                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'game': item['competition']['name'], 'salary': item['salary'], 'projection': sleeper_players[item['displayName'][:15]]}})
+                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'projection': sleeper_players[item['displayName'][:15]]}})
     return dk_players
 
-def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input):
+def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input, dst_req_input):
     dk_players = fetch_dk_players()  
     # Define PuLP problem and variable. 
     prob = LpProblem('Optimize', LpMaximize)
@@ -46,6 +48,9 @@ def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input):
         'TE': 2,
         'DST': 1
     }
+    prob += lpSum(dk_players[p]["salary"] * player_vars[p] for p in dk_players) <= 50000
+    prob += lpSum(player_vars[p] for p in dk_players) == 9  
+    prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
     # Require inclusion or exclusion of players if specified.
     if incl_req_input:
         for p in incl_req_input:
@@ -53,16 +58,18 @@ def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input):
     if excl_req_input:
         for p in excl_req_input:
             player_vars[p].upBound = 0
-    prob += lpSum(dk_players[p]["salary"] * player_vars[p] for p in dk_players) <= 50000
-    prob += lpSum(player_vars[p] for p in dk_players) == 9  
-    prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
+    teams = list(set([data["team"] for data in dk_players.values()]))
     for pos, max_count in pos_max.items():
         prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) <= max_count
         # Require position for flex if specified and update PuLP constraints for players per flex position.
         if flex_req_input in ["RB", "WR", "TE"] and flex_req_input == pos:
             prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == flex_req_input]) == max_count
         elif flex_req_input in ["RB", "WR", "TE"] and pos in ["RB", "WR", "TE"]:
-            prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) == max_count - 1    
+            prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) == max_count - 1   
+        # Require exclusion of teams opposing the defense if specified.  
+        elif dst_req_input == 1 and pos == 'DST':
+            for team in teams: 
+                prob += lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team]) <= 1
     # Define PuLP objective to maximize total projection and solve. 
     prob += lpSum(dk_players[p]["projection"] * player_vars[p] for p in dk_players)
     prob.solve()
@@ -73,18 +80,22 @@ def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input):
             pos = dk_players[player]['position']
             # Label flex if RB, WR, or TE player count reaches position maximum. 
             if pos in ['RB', 'WR', 'TE'] and flex_count[pos] == pos_max[pos] - 1:
-                print(f"FLEX {dk_players[player]['name']} ({player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
+                print(f"FLEX {dk_players[player]['name']} ({dk_players[player]['team']} {player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
             elif pos in ['RB', 'WR', 'TE']:
-                print(f"{pos} {dk_players[player]['name']} ({player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
+                print(f"{pos} {dk_players[player]['name']} ({dk_players[player]['team']} {player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
                 flex_count[pos] += 1
             else:
-                print(f"{pos} {dk_players[player]['name']} ({player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
+                print(f"{pos} {dk_players[player]['name']} ({dk_players[player]['team']} {player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
     print("Total Projection:", pulp.value(prob.objective))
     print("Remaining Salary:", 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players))
 
+# Option to require exclusion of teams opposing the defense. 
+dst_req_input = 1
+
 # Option to require inclusion or exclusion of specific players. 
-incl_req_input = ['58', '8', '693']
+incl_req_input = ['256']
 excl_req_input = ['514']
+
 # Option to require specific position for flex.
 flex_req_input = 'RB'
-optimize_dk_players(flex_req_input, incl_req_input, excl_req_input)
+optimize_dk_players(flex_req_input, incl_req_input, excl_req_input, dst_req_input)
