@@ -52,11 +52,11 @@ def optimize_dk_players(flex_input, incl_input, excl_input, qb_stack_input, dst_
     prob += lpSum(player_vars[p] for p in dk_players) == 9  
     prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
     # Require inclusion or exclusion of players if specified.
-    if incl_input:
-        for p in incl_input:
+    for p in incl_input:
+        if p in player_vars:
             player_vars[p].lowBound = 1
-    if excl_input:
-        for p in excl_input:
+    for p in excl_input:
+        if p in player_vars:
             player_vars[p].upBound = 0
     for pos, max_count in pos_max.items():
         prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) <= max_count
@@ -98,27 +98,23 @@ def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_in
             qb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "QB"])
             prob += lpSum(flex) >= lpSum(qb)
         # Require DST + RB from the same team if specified. 
+        dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "DST"])
         if dst_stack_input[0] == 1:
             rb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'RB'])  
-            dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "DST"])
             prob += lpSum(rb) >= lpSum(dst)
         # Require exclusion of teams opposing DST if specified.  
         if dst_stack_input[1] == 1:
             other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
-            dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'DST'])
             prob += lpSum(lpSum(other)) if lpSum(dst) >= 1 else None == 0
 
 # Option to require specific position for flex.
 flex_input = ''
-
 # Option to require inclusion or exclusion of specific players. 
 incl_input = ['111']
 excl_input = ['61']
-
 # Option to require QB + RB, WR, and/or TE stacks from the same team.
 qb_stack_input = ['WR']
-
 # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
-dst_stack_input = [0,0]
+dst_stack_input = [1,0]
 
 optimize_dk_players(flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
