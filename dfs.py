@@ -35,7 +35,7 @@ def fetch_dk_players():
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'projection': sleeper_players[item['displayName'][:15]]}})
     return dk_players
 
-def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input, dst_req_input, qb_req_input):
+def optimize_dk_players(flex_input, incl_input, excl_input, dst_stack_input, qb_stack_input):
     dk_players = fetch_dk_players()  
     # Define PuLP problem and variable. 
     prob = LpProblem('Optimize', LpMaximize)
@@ -52,34 +52,21 @@ def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input, dst_req_
     prob += lpSum(player_vars[p] for p in dk_players) == 9  
     prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
     # Require inclusion or exclusion of players if specified.
-    if incl_req_input:
-        for p in incl_req_input:
+    if incl_input:
+        for p in incl_input:
             player_vars[p].lowBound = 1
-    if excl_req_input:
-        for p in excl_req_input:
+    if excl_input:
+        for p in excl_input:
             player_vars[p].upBound = 0
     for pos, max_count in pos_max.items():
         prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) <= max_count
         # Require position for flex if specified and update PuLP constraints for players per flex position.
-        if flex_req_input in ["RB", "WR", "TE"] and flex_req_input == pos:
-            prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == flex_req_input]) == max_count
-        elif flex_req_input in ["RB", "WR", "TE"] and pos in ["RB", "WR", "TE"]:
+        if flex_input in ["RB", "WR", "TE"] and flex_input == pos:
+            prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == flex_input]) == max_count
+        elif flex_input in ["RB", "WR", "TE"] and pos in ["RB", "WR", "TE"]:
             prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) == max_count - 1   
-    teams = {}
-    for data in dk_players.values():
-        teams.update({data['team']: {'RB':0, 'WR':0, 'TE':0}}) if data["position"] == 'DST' else None
-    for team, min_count in teams.items(): 
-        # Require QB and at least 1 flex from the same team.
-        if qb_req_input == 1:
-            flex = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] in ["RB", "WR", "TE"]])  
-            qb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "QB"])
-            prob += lpSum(flex) >= lpSum(qb)
-        # Require exclusion of teams opposing the defense if specified.  
-        if dst_req_input == 1:
-            other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
-            dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'DST'])
-            if lpSum(dst) >= 1:
-                prob += lpSum(lpSum(other)) if lpSum(dst) >= 1 else None == 0 
+    # Define PuLP constraints for maximum players per team.  
+    team_constraints(dk_players, player_vars, prob, dst_stack_input, qb_stack_input)
     # Define PuLP objective to maximize total projection and solve. 
     prob += lpSum(dk_players[p]["projection"] * player_vars[p] for p in dk_players)
     prob.solve()
@@ -100,17 +87,33 @@ def optimize_dk_players(flex_req_input, incl_req_input, excl_req_input, dst_req_
     print("Total Projection:", pulp.value(prob.objective))
     print("Remaining Salary:", 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players))
 
-# Option to require qb and flex stack from the same team.
-qb_req_input = 0
-
-# Option to require exclusion of teams opposing the defense. 
-dst_req_input = 1
-
-# Option to require inclusion or exclusion of specific players. 
-incl_req_input = ['61']
-excl_req_input = ['111']
+def team_constraints(dk_players, player_vars, prob, dst_stack_input, qb_stack_input):
+    teams = {}
+    for data in dk_players.values():
+        teams.update({data['team']: {'RB':0, 'WR':0, 'TE':0}}) if data["position"] == 'DST' else None
+    for team in teams: 
+        # Require QB and at least 1 flex from the same team.
+        if qb_stack_input == 1:
+            flex = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] in ["RB", "WR", "TE"]])  
+            qb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "QB"])
+            prob += lpSum(flex) >= lpSum(qb)
+        # Require exclusion of teams opposing the defense if specified.  
+        if dst_stack_input == 1:
+            other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
+            dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'DST'])
+            prob += lpSum(lpSum(other)) if lpSum(dst) >= 1 else None == 0
 
 # Option to require specific position for flex.
-flex_req_input = 'RB'
+flex_input = 'RB'
 
-optimize_dk_players(flex_req_input, incl_req_input, excl_req_input, dst_req_input, qb_req_input)
+# Option to require inclusion or exclusion of specific players. 
+incl_input = ['111']
+excl_input = ['61']
+
+# Option to require qb and flex stack from the same team.
+qb_stack_input = 0
+
+# Option to require exclusion of teams opposing the defense. 
+dst_stack_input = 1
+
+optimize_dk_players(flex_input, incl_input, excl_input, dst_stack_input, qb_stack_input)
