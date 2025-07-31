@@ -70,6 +70,7 @@ def optimize_dk_players(flex_input, incl_input, excl_input, qb_stack_input, dst_
     # Define PuLP objective to maximize total projection and solve. 
     prob += lpSum(dk_players[p]["projection"] * player_vars[p] for p in dk_players)
     prob.solve()    
+    print_results(dk_players, player_vars, prob, pos_max)
 
 def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_input):
     teams = {}
