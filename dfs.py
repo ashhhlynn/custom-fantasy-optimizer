@@ -70,12 +70,11 @@ def optimize_dk_players(flex_input, incl_input, excl_input, qb_stack_input, dst_
     # Define PuLP objective to maximize total projection and solve. 
     prob += lpSum(dk_players[p]["projection"] * player_vars[p] for p in dk_players)
     prob.solve()    
-    print_results(dk_players, player_vars, prob, pos_max)
 
 def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_input):
     teams = {}
     for data in dk_players.values():
-        teams.update({data['team']: {'RB':0, 'WR':0, 'TE':0}}) if data["position"] == 'DST' else None
+        teams.update({data['team']: 0}) if data["position"] == 'DST' else None
     for team in teams: 
         # Require QB + RB, WR, and/or TE from the same team if specified.
         for pos in qb_stack_input:
@@ -113,11 +112,11 @@ def print_results(dk_players, player_vars, prob, pos_max):
 # Option to require specific position for flex.
 flex_input = 'RB'
 # Option to require inclusion or exclusion of specific players. 
-incl_input = ['111']
-excl_input = ['61']
+incl_input = []
+excl_input = []
 # Option to require QB + RB, WR, and/or TE stacks from the same team.
-qb_stack_input = ['WR']
+qb_stack_input = []
 # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
-dst_stack_input = [1,0]
+dst_stack_input = [0,0]
 
 optimize_dk_players(flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
