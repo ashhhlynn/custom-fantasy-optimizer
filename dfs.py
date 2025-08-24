@@ -1,6 +1,8 @@
 import requests
 import json
 from pulp import *
+import streamlit as st 
+import pandas as pd 
 
 def fetch_sleeper_players():
     # Fetch projections from sleeper API.
@@ -33,7 +35,43 @@ def fetch_dk_players():
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'projection': sleeper_players[item['displayName']]}})
                 elif item['displayName'][:15] in sleeper_players:
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'projection': sleeper_players[item['displayName'][:15]]}})
+    display_player_table(dk_players)
     return dk_players
+
+def display_player_table(dk_players):
+    # Display Streamlit player and lineup tables 
+    players_df = pd.DataFrame.from_dict(dk_players, orient="index")
+    lineup_df = pd.DataFrame({
+        "Position": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
+        "Name": ["", "", "", "", "", "", "", "", ""],
+        "Salary": ["", "", "", "", "", "", "", "", ""],
+        "Projection": ["", "", "", "", "", "", "", "", ""]
+    })
+    st.title("Custom Fantasy Optimizer")
+    players_df["Lock"] = False
+    players_df["Exclude"] = False
+    col1, col2 = st.columns([7, 3]) 
+    with col1:
+        st.subheader("Player Pool")
+        st.data_editor(
+            players_df,
+            use_container_width=True,
+            height=600,  # adjust vertical size
+            hide_index=True,
+            column_config={
+                "Lock": st.column_config.CheckboxColumn("Lock"),
+                "Exclude": st.column_config.CheckboxColumn("Exclude")
+            },
+            key="player_pool"
+        )
+    with col2:
+        st.subheader("Lineup")  
+        st.dataframe(
+            lineup_df,
+            use_container_width=True,
+            height=400,
+            hide_index=True
+    )
 
 def optimize_dk_players(flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
     dk_players = fetch_dk_players()  
