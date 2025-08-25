@@ -18,6 +18,16 @@
 - Streamlit
 
 ### Features
+- Fetch Sunday Classic players from DraftKings API 
+- Fetch player projections in PPR scoring from Sleeper API 
+- Interactive player queue and lineup tables with Streamlit 
+- Lock or exclude players from lineup 
+- Specify position for FLEX
+- QB + RB/WR/TE stacking options
+- RB/DST stacks
+- Exclude players opposing DST 
+- Optimize highest projected lineup with PuLP 
+
 ### Media
 
 ### Setup 
@@ -34,3 +44,4 @@
    $ streamlit run dfs.py
    ```
 ### License 
+This project is MIT licensed.
