@@ -53,17 +53,22 @@ def display_player_table(dk_players):
     col1, col2 = st.columns([7, 3]) 
     with col1:
         st.subheader("Player Pool")
-        st.data_editor(
+        edited_df = st.data_editor(
             players_df,
             use_container_width=True,
-            height=600,  # adjust vertical size
+            height=600,
             hide_index=True,
             column_config={
                 "Lock": st.column_config.CheckboxColumn("Lock"),
                 "Exclude": st.column_config.CheckboxColumn("Exclude")
             },
             key="player_pool"
-        )
+        )        
+    # Option to require inclusion or exclusion of specific players. 
+    locked_players = edited_df[edited_df["Lock"]].copy()
+    excluded_players = edited_df[edited_df["Exclude"]].copy()    
+    incl_input = locked_players.index.tolist()
+    excl_input = excluded_players.index.tolist()
     with col2:
         st.subheader("Lineup")  
         st.dataframe(
@@ -72,9 +77,15 @@ def display_player_table(dk_players):
             height=400,
             hide_index=True
     )
+    # Option to require specific position for flex.
+    flex_input = ''
+    # Option to require QB + RB, WR, and/or TE stacks from the same team.
+    qb_stack_input = []
+    # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
+    dst_stack_input = [0,0]
+    optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
 
-def optimize_dk_players(flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
-    dk_players = fetch_dk_players()  
+def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
     # Define PuLP problem and variable. 
     prob = LpProblem('Optimize', LpMaximize)
     player_vars = LpVariable.dicts('Select', dk_players.keys(), 0, 1, cat='Binary')
@@ -148,14 +159,4 @@ def print_results(dk_players, player_vars, prob, pos_max):
     print("Total Projection:", pulp.value(prob.objective))
     print("Remaining Salary:", 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players))
 
-# Option to require specific position for flex.
-flex_input = 'RB'
-# Option to require inclusion or exclusion of specific players. 
-incl_input = []
-excl_input = []
-# Option to require QB + RB, WR, and/or TE stacks from the same team.
-qb_stack_input = []
-# Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
-dst_stack_input = [0,0]
-
-optimize_dk_players(flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
+fetch_dk_players()
