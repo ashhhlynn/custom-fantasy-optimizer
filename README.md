@@ -2,7 +2,7 @@
 <table>
   <tr>
     <td>
-    Customizable Fantasy Football lineup optimizer built with Python and linear programming in PuLP. Optimize DraftKings with flexible stacking, player, team, and position controls for highest projected lineups under position and salary constraints. Updated weekly during NFL season for Sunday Classic contests. 
+    Customizable fantasy football lineup optimizer built with Python and linear programming in PuLP. Optimize DraftKings with flexible stacking, player, team, and position controls for highest projected lineups under position and salary constraints. Updated weekly during NFL season for Sunday Classic contests. 
     </td>
   </tr>
 </table> 
@@ -10,7 +10,7 @@
 #### :link: <a href="https://custom-fantasy-optimizer.streamlit.app/">Website</a>
 
 ### Technologies Used
-- Python
+- Python 3.8+
 - PuLP
 - DraftKings API
 - Sleeper API
@@ -18,15 +18,20 @@
 - Streamlit
 
 ### Features
-- Fetch Sunday Classic players from DraftKings API 
-- Fetch player projections in PPR scoring from Sleeper API 
 - Interactive player queue and lineup tables with Streamlit 
 - Lock or exclude players from lineup 
 - Specify position for FLEX
 - QB + RB/WR/TE stacking options
 - RB/DST stacks
 - Exclude players opposing DST 
-- Optimize highest projected lineup with PuLP 
+- Optimize highest projected lineup with PuLP
+
+### How It Works
+1) Fetches contest player pool from DraftKings API
+2) Fetches player projections from Sleeper API
+3) Uses PuLP to optimize highest projected lineups under position/salary constraints
+4) Lets you interactively adjust constraints (locks, exclusions, stacks)
+5) Displays optimized lineup on Streamlit
 
 ### Media
 
