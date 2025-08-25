@@ -77,6 +77,10 @@ def display_player_table(dk_players):
             height=400,
             hide_index=True
     )
+    qb_stack_select = st.multiselect('Stack QB with', ['RB', 'WR', 'TE'])
+    flex_select = st.radio('Require Flex as', ['RB', 'WR', 'TE'], index=None)
+    dst_stack_1_select = st.radio('Stack DST and RB', ['Yes', 'No'], index=1)
+    dst_stack_2_select = st.radio('Exclude teams opposing DST', ['Yes', 'No'], index=1)
     # Option to require specific position for flex.
     flex_input = ''
     # Option to require QB + RB, WR, and/or TE stacks from the same team.
