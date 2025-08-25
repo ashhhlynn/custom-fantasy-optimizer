@@ -64,11 +64,6 @@ def display_player_table(dk_players):
             },
             key="player_pool"
         )        
-    # Option to require inclusion or exclusion of specific players. 
-    locked_players = edited_df[edited_df["Lock"]].copy()
-    excluded_players = edited_df[edited_df["Exclude"]].copy()    
-    incl_input = locked_players.index.tolist()
-    excl_input = excluded_players.index.tolist()
     with col2:
         st.subheader("Lineup")  
         st.dataframe(
@@ -77,20 +72,23 @@ def display_player_table(dk_players):
             height=400,
             hide_index=True
     )
+    # Option to require inclusion or exclusion of specific players. 
+    locked_players = edited_df[edited_df["Lock"]].copy()
+    excluded_players = edited_df[edited_df["Exclude"]].copy()    
+    incl_input = locked_players.index.tolist()
+    excl_input = excluded_players.index.tolist()
+    # Option to require QB + RB, WR, and/or TE stacks from the same team.
     qb_stack_select = st.multiselect('Stack QB with', ['RB', 'WR', 'TE'])
-
-    # Unselect option 
+    # Option to require specific position for flex.
     flex_select = st.radio('Require Flex as', ['RB', 'WR', 'TE'], index=None)
-    
+    # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
     dst_stack_1_select = st.radio('Stack DST and RB', ['Yes', 'No'], index=1)
     dst_stack_2_select = st.radio('Exclude teams opposing DST', ['Yes', 'No'], index=1)
-    # Option to require specific position for flex.
-    flex_input = flex_select
-    # Option to require QB + RB, WR, and/or TE stacks from the same team.
-    qb_stack_input = qb_stack_select
-    # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
-    dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
-    optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
+    if st.button("Optimize Lineup"):
+        flex_input = flex_select
+        qb_stack_input = qb_stack_select
+        dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
+        optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
 
 def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
     # Define PuLP problem and variable. 
