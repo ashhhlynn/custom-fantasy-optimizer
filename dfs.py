@@ -41,44 +41,46 @@ def display_interface(dk_players):
     # Display Streamlit player and lineup tables 
     players_df = pd.DataFrame.from_dict(dk_players, orient="index")
     lineup_df = pd.DataFrame({
-        "Position": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
+        "Pos.": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
         "Name": ["", "", "", "", "", "", "", "", ""],
         "Team": ["", "", "", "", "", "", "", "", ""],
         "Salary": ["", "", "", "", "", "", "", "", ""],
-        "Projection": ["", "", "", "", "", "", "", "", ""]
+        "Proj.": ["", "", "", "", "", "", "", "", ""]
     })
     st.set_page_config(layout="wide")    
     st.title("Custom Fantasy Optimizer")
-    col_i_1, col_i_2, col_i_3, col_i_4, col_i_5 = st.columns([3, 3, 3, 3, 4])
+    col_i_1, col_i_2, col_i_3, col_i_4 = st.columns([3, 3, 3, 3])
     # Option to require specific position for flex.
     with col_i_1:
-        flex_input = st.radio('Require Flex as', ['RB', 'WR', 'TE'], index=None, horizontal=True)
+        flex_input = st.radio('Require Flex Position', ['RB', 'WR', 'TE'], index=None, horizontal=True)
+        optimizer_button = st.button("Optimize Lineup")
     # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
     with col_i_2:    
-        dst_stack_1_select = st.radio('Stack DST and RB', ['Yes', 'No'], index=1, horizontal=True)
+        dst_stack_1_select = st.radio('Same Team RB/DST Stack', ['Yes', 'No'], index=1, horizontal=True)
     with col_i_3:
-        dst_stack_2_select = st.radio('Exclude teams opposing DST', ['Yes', 'No'], index=1, horizontal=True)
+        dst_stack_2_select = st.radio('Exclude Teams Opposing DST', ['Yes', 'No'], index=1, horizontal=True)
     # Option to require QB + RB, WR, and/or TE stacks from the same team.
     with col_i_4: 
-        qb_stack_input = st.multiselect('Stack QB with', ['RB', 'WR', 'TE'])
+        qb_stack_input = st.multiselect('Same Team QB/Pos. Stack', ['RB', 'WR', 'TE'])
     dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
-    with col_i_5:
-        c1, c2 = st.columns([1, 3])
-        with c2:
-            optimizer_button = st.button("Optimize Lineup")
     players_df["Lock"] = False
     players_df["Exclude"] = False
-    col1, col2 = st.columns([8, 4]) 
+    col1, col2 = st.columns([5, 4]) 
     with col1:
         st.subheader("Player Pool")
         edited_df = st.data_editor(
             players_df,
-            use_container_width=False,
-            height=600,
+            height=560,
             hide_index=True,
             column_config={
+                "name": st.column_config.Column("Name", disabled=True),
+                "position": st.column_config.Column("Position", disabled=True),
+                "team": st.column_config.Column("Team", disabled=True),
+                "opp": st.column_config.Column("Opp", disabled=True),
+                "salary": st.column_config.Column("Salary", disabled=True),
+                "projection": st.column_config.Column("Projection", disabled=True),
                 "Lock": st.column_config.CheckboxColumn("Lock"),
-                "Exclude": st.column_config.CheckboxColumn("Exclude")
+                "Exclude": st.column_config.CheckboxColumn("Excl.")
             },
             key="player_pool"
         )      
@@ -96,9 +98,9 @@ def display_interface(dk_players):
             st.subheader("Lineup")
             st.dataframe(
                 lineup_df,
-                use_container_width=True,
                 height=352,
-                hide_index=True
+                hide_index=True,
+                use_container_width=True
             )
                 
 def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
@@ -162,24 +164,24 @@ def display_results(dk_players, player_vars, prob, lineup_df, col2):
     for player in dk_players:
         if player_vars[player].varValue == 1:
             pos = dk_players[player]['position']
-            row = final_lineup[(final_lineup["Position"] == pos) & (final_lineup["Name"] == "")].index
+            row = final_lineup[(final_lineup["Pos."] == pos) & (final_lineup["Name"] == "")].index
             if len(row) > 0:
                 final_lineup.at[row[0], "Name"] = dk_players[player]['name'] 
                 final_lineup.at[row[0], "Team"] = dk_players[player]['team'] 
                 final_lineup.at[row[0], "Salary"] = dk_players[player]['salary']
-                final_lineup.at[row[0], "Projection"] = dk_players[player]['projection'] 
+                final_lineup.at[row[0], "Proj."] = dk_players[player]['projection'] 
             else:
-                flex_row = final_lineup[(final_lineup["Position"] == "FLEX") & (final_lineup["Name"] == "")].index
+                flex_row = final_lineup[(final_lineup["Pos."] == "FLEX") & (final_lineup["Name"] == "")].index
                 if len(flex_row) > 0 and pos in ['RB', 'WR', 'TE']:
                     final_lineup.at[flex_row[0], "Name"] = dk_players[player]['name']
                     final_lineup.at[flex_row[0], "Team"] = dk_players[player]['team']
                     final_lineup.at[flex_row[0], "Salary"] = dk_players[player]['salary']
-                    final_lineup.at[flex_row[0], "Projection"] = dk_players[player]['projection']
+                    final_lineup.at[flex_row[0], "Proj."] = dk_players[player]['projection']
     rem_sal = 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players)
     with col2:
         st.subheader("Lineup")
-        st.dataframe(final_lineup, use_container_width=True, height=352, hide_index=True)
-        st.caption(pulp.value(prob.objective))
-        st.caption(rem_sal)
+        st.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
+        st.write("Total Projection", pulp.value(prob.objective))
+        st.write("Remaining Salary", rem_sal)
 
 fetch_dk_players()
