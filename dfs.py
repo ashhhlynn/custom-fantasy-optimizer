@@ -44,22 +44,32 @@ def display_player_table(dk_players):
     lineup_df = pd.DataFrame({
         "Position": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
         "Name": ["", "", "", "", "", "", "", "", ""],
+        "Team": ["", "", "", "", "", "", "", "", ""],
         "Salary": ["", "", "", "", "", "", "", "", ""],
         "Projection": ["", "", "", "", "", "", "", "", ""]
     })
     st.set_page_config(layout="wide")    
     st.title("Custom Fantasy Optimizer")
-    # Option to require QB + RB, WR, and/or TE stacks from the same team.
-    qb_stack_input = st.multiselect('Stack QB with', ['RB', 'WR', 'TE'])
+    col_i_1, col_i_2, col_i_3, col_i_4, col_i_5 = st.columns([3, 3, 3, 3, 4])
     # Option to require specific position for flex.
-    flex_input = st.radio('Require Flex as', ['RB', 'WR', 'TE'], index=None, horizontal=True)
+    with col_i_1:
+        flex_input = st.radio('Require Flex as', ['RB', 'WR', 'TE'], index=None, horizontal=True)
     # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
-    dst_stack_1_select = st.radio('Stack DST and RB', ['Yes', 'No'], index=1, horizontal=True)
-    dst_stack_2_select = st.radio('Exclude teams opposing DST', ['Yes', 'No'], index=1, horizontal=True)
+    with col_i_2:    
+        dst_stack_1_select = st.radio('Stack DST and RB', ['Yes', 'No'], index=1, horizontal=True)
+    with col_i_3:
+        dst_stack_2_select = st.radio('Exclude teams opposing DST', ['Yes', 'No'], index=1, horizontal=True)
+    # Option to require QB + RB, WR, and/or TE stacks from the same team.
+    with col_i_4: 
+        qb_stack_input = st.multiselect('Stack QB with', ['RB', 'WR', 'TE'])
     dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
+    with col_i_5:
+        c1, c2 = st.columns([1, 3])
+        with c2:
+            optimizer_button = st.button("Optimize Lineup")
     players_df["Lock"] = False
     players_df["Exclude"] = False
-    col1, col2 = st.columns([7, 4]) 
+    col1, col2 = st.columns([8, 4]) 
     with col1:
         st.subheader("Player Pool")
         edited_df = st.data_editor(
@@ -78,7 +88,7 @@ def display_player_table(dk_players):
     excluded_players = edited_df[edited_df["Exclude"]].copy()    
     incl_input = locked_players.index.tolist()
     excl_input = excluded_players.index.tolist()
-    if st.button("Optimize Lineup"):
+    if optimizer_button:
         dk_players, player_vars, prob = optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
         final_lineup = lineup_df.copy()
         for player in dk_players:
@@ -87,12 +97,15 @@ def display_player_table(dk_players):
                 row = final_lineup[(final_lineup["Position"] == pos) & (final_lineup["Name"] == "")].index
                 if len(row) > 0:
                     final_lineup.at[row[0], "Name"] = dk_players[player]['name'] 
+                    final_lineup.at[row[0], "Team"] = dk_players[player]['team'] 
                     final_lineup.at[row[0], "Salary"] = dk_players[player]['salary']
                     final_lineup.at[row[0], "Projection"] = dk_players[player]['projection'] 
                 else:
                     flex_row = final_lineup[(final_lineup["Position"] == "FLEX") & (final_lineup["Name"] == "")].index
                     if len(flex_row) > 0 and pos in ['RB', 'WR', 'TE']:
                         final_lineup.at[flex_row[0], "Name"] = dk_players[player]['name']
+                        final_lineup.at[flex_row[0], "Team"] = dk_players[player]['team']
+
                         final_lineup.at[flex_row[0], "Salary"] = dk_players[player]['salary']
                         final_lineup.at[flex_row[0], "Projection"] = dk_players[player]['projection']
         rem_sal = 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players)
