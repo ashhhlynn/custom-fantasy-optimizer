@@ -28,10 +28,7 @@
    $ cd custom-fantasy-optimizer
    ```
    ```sh
-   $ cd dfs.py
-   ```
-   ```sh
-   $ pip install python3 
+   $ pip install -r requirements.txt
    ```
    ```sh
    $ streamlit run dfs.py
