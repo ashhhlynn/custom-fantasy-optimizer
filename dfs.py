@@ -72,13 +72,20 @@ def display_interface(dk_players):
         "Salary": [""]*9,
         "Proj.": [""]*9,
     })
-    with col2:
-        st.subheader("Lineup")
+    with col2:        
+        col3, col4 = st.columns([3, 5]) 
+        with col3:
+            st.subheader("Lineup")
         if optimizer_button:
             final_lineup, rem_sal, total_proj = optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
+            with col4:
+                st.write("")
+                st.write("Projection", round(total_proj, 2), "Remaining Salary", rem_sal)
             st.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
-            st.write("Total Projection", round(total_proj, 2), "Remaining Salary", rem_sal)
         else:
+            with col4:
+                st.write("")
+                st.write("Total Projection", round(0, 2), "Remaining Salary", 50000)
             st.dataframe(
                 lineup_df,
                 height=352,
