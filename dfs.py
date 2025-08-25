@@ -47,15 +47,24 @@ def display_player_table(dk_players):
         "Salary": ["", "", "", "", "", "", "", "", ""],
         "Projection": ["", "", "", "", "", "", "", "", ""]
     })
+    st.set_page_config(layout="wide")    
     st.title("Custom Fantasy Optimizer")
+    # Option to require QB + RB, WR, and/or TE stacks from the same team.
+    qb_stack_input = st.multiselect('Stack QB with', ['RB', 'WR', 'TE'])
+    # Option to require specific position for flex.
+    flex_input = st.radio('Require Flex as', ['RB', 'WR', 'TE'], index=None, horizontal=True)
+    # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
+    dst_stack_1_select = st.radio('Stack DST and RB', ['Yes', 'No'], index=1, horizontal=True)
+    dst_stack_2_select = st.radio('Exclude teams opposing DST', ['Yes', 'No'], index=1, horizontal=True)
+    dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
     players_df["Lock"] = False
     players_df["Exclude"] = False
-    col1, col2 = st.columns([7, 3]) 
+    col1, col2 = st.columns([7, 4]) 
     with col1:
         st.subheader("Player Pool")
         edited_df = st.data_editor(
             players_df,
-            use_container_width=True,
+            use_container_width=False,
             height=600,
             hide_index=True,
             column_config={
@@ -63,33 +72,45 @@ def display_player_table(dk_players):
                 "Exclude": st.column_config.CheckboxColumn("Exclude")
             },
             key="player_pool"
-        )        
-    with col2:
-        st.subheader("Lineup")  
-        st.dataframe(
-            lineup_df,
-            use_container_width=True,
-            height=400,
-            hide_index=True
-    )
+        )      
     # Option to require inclusion or exclusion of specific players. 
     locked_players = edited_df[edited_df["Lock"]].copy()
     excluded_players = edited_df[edited_df["Exclude"]].copy()    
     incl_input = locked_players.index.tolist()
     excl_input = excluded_players.index.tolist()
-    # Option to require QB + RB, WR, and/or TE stacks from the same team.
-    qb_stack_select = st.multiselect('Stack QB with', ['RB', 'WR', 'TE'])
-    # Option to require specific position for flex.
-    flex_select = st.radio('Require Flex as', ['RB', 'WR', 'TE'], index=None)
-    # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
-    dst_stack_1_select = st.radio('Stack DST and RB', ['Yes', 'No'], index=1)
-    dst_stack_2_select = st.radio('Exclude teams opposing DST', ['Yes', 'No'], index=1)
     if st.button("Optimize Lineup"):
-        flex_input = flex_select
-        qb_stack_input = qb_stack_select
-        dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
-        optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
-
+        dk_players, player_vars, prob = optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
+        final_lineup = lineup_df.copy()
+        for player in dk_players:
+            if player_vars[player].varValue == 1:
+                pos = dk_players[player]['position']
+                row = final_lineup[(final_lineup["Position"] == pos) & (final_lineup["Name"] == "")].index
+                if len(row) > 0:
+                    final_lineup.at[row[0], "Name"] = dk_players[player]['name'] 
+                    final_lineup.at[row[0], "Salary"] = dk_players[player]['salary']
+                    final_lineup.at[row[0], "Projection"] = dk_players[player]['projection'] 
+                else:
+                    flex_row = final_lineup[(final_lineup["Position"] == "FLEX") & (final_lineup["Name"] == "")].index
+                    if len(flex_row) > 0 and pos in ['RB', 'WR', 'TE']:
+                        final_lineup.at[flex_row[0], "Name"] = dk_players[player]['name']
+                        final_lineup.at[flex_row[0], "Salary"] = dk_players[player]['salary']
+                        final_lineup.at[flex_row[0], "Projection"] = dk_players[player]['projection']
+        rem_sal = 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players)
+        with col2:
+            st.subheader("Lineup")
+            st.dataframe(final_lineup, use_container_width=True, height=352, hide_index=True)
+            st.caption(pulp.value(prob.objective))
+            st.caption(rem_sal)
+    else:
+        with col2:
+            st.subheader("Lineup")
+            st.dataframe(
+                lineup_df,
+                use_container_width=True,
+                height=352,
+                hide_index=True
+            )
+                
 def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
     # Define PuLP problem and variable. 
     prob = LpProblem('Optimize', LpMaximize)
@@ -124,7 +145,7 @@ def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack
     # Define PuLP objective to maximize total projection and solve. 
     prob += lpSum(dk_players[p]["projection"] * player_vars[p] for p in dk_players)
     prob.solve()    
-    print_results(dk_players, player_vars, prob, pos_max)
+    return dk_players, player_vars, prob
 
 def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_input):
     teams = {}
@@ -145,23 +166,5 @@ def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_in
         if dst_stack_input[1] == 'Yes':
             other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
             prob += lpSum(lpSum(other)) if lpSum(dst) >= 1 else None == 0
-
-def print_results(dk_players, player_vars, prob, pos_max):
-    # Print PuLP results of players with salaries and projections. 
-    flex_count = {'RB': 0, 'WR': 0, 'TE': 0}    
-    for player in dk_players:
-        if player_vars[player].varValue == 1:
-            pos = dk_players[player]['position']
-            # Label flex if RB, WR, or TE player count reaches position maximum. 
-            if pos in ['RB', 'WR', 'TE'] and flex_count[pos] == pos_max[pos] - 1:
-                print(f"FLEX {dk_players[player]['name']} ({dk_players[player]['team']} {player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
-            elif pos in ['RB', 'WR', 'TE']:
-                print(f"{pos} {dk_players[player]['name']} ({dk_players[player]['team']} {player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
-                flex_count[pos] += 1
-            else:
-                print(f"{pos} {dk_players[player]['name']} ({dk_players[player]['team']} {player}): ${dk_players[player]['salary']}, {dk_players[player]['projection']}")
-                print(dk_players[player])
-    print("Total Projection:", pulp.value(prob.objective))
-    print("Remaining Salary:", 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players))
 
 fetch_dk_players()
