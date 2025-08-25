@@ -38,15 +38,6 @@ def fetch_dk_players():
     display_interface(dk_players)
 
 def display_interface(dk_players):
-    # Display Streamlit player and lineup tables 
-    players_df = pd.DataFrame.from_dict(dk_players, orient="index")
-    lineup_df = pd.DataFrame({
-        "Pos.": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
-        "Name": ["", "", "", "", "", "", "", "", ""],
-        "Team": ["", "", "", "", "", "", "", "", ""],
-        "Salary": ["", "", "", "", "", "", "", "", ""],
-        "Proj.": ["", "", "", "", "", "", "", "", ""]
-    })
     st.set_page_config(layout="wide")    
     st.title("Custom Fantasy Optimizer")
     with st.container(height=164):
@@ -64,6 +55,8 @@ def display_interface(dk_players):
         with col_i_4:
             dst_stack_2_select = st.radio('Exclude Teams Opposing DST', ['Yes', 'No'], index=1, horizontal=True)
     dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
+    # Display player queue 
+    players_df = pd.DataFrame.from_dict(dk_players, orient="index")
     players_df["Lock"] = False
     players_df["Exclude"] = False
     col1, col2 = st.columns([5, 4]) 
@@ -85,12 +78,17 @@ def display_interface(dk_players):
             },
             key="player_pool"
         )      
-    # Option to require inclusion or exclusion of specific players. 
-    locked_players = edited_df[edited_df["Lock"]].copy()
-    excluded_players = edited_df[edited_df["Exclude"]].copy()    
-    incl_input = locked_players.index.tolist()
-    excl_input = excluded_players.index.tolist()
+    # Option to require inclusion or exclusion of specific players.    
+    incl_input = edited_df[edited_df["Lock"]].index.tolist()
+    excl_input = edited_df[edited_df["Exclude"]].index.tolist()
     # Run optimizer and display results 
+    lineup_df = pd.DataFrame({
+        "Pos.": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
+        "Name": ["", "", "", "", "", "", "", "", ""],
+        "Team": ["", "", "", "", "", "", "", "", ""],
+        "Salary": ["", "", "", "", "", "", "", "", ""],
+        "Proj.": ["", "", "", "", "", "", "", "", ""]
+    })
     if optimizer_button:
         final_lineup, rem_sal, total_proj = optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
         with col2:
