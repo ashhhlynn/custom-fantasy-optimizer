@@ -2,14 +2,12 @@
 <table>
   <tr>
     <td>
-    Customizable fantasy football lineup optimizer built with Python and linear programming in PuLP. Optimize DraftKings with flexible stacking, player, team, and position controls for highest projected lineups under position and salary constraints. Updated weekly during NFL season for Sunday Classic contests. 
+    Customizable fantasy football lineup optimizer built with Python and linear programming in PuLP. Optimize DraftKings with flexible stacking, player, team, and position controls for highest projected lineups under position and salary constraints. Updated weekly during NFL season for Sunday Classic contests.  <b>:link: <a href="https://custom-fantasy-optimizer.streamlit.app/">Website</a></b>
     </td>
   </tr>
 </table> 
 
-#### :link: <a href="https://custom-fantasy-optimizer.streamlit.app/">Website</a>
-
-### Technologies Used
+### Technologies
 - Python 3.8+
 - PuLP
 - DraftKings API
@@ -18,22 +16,23 @@
 - Streamlit
 
 ### Features
-- Interactive player queue and lineup tables with Streamlit 
-- Lock or exclude players from lineup 
+- Interactive player queue and lineup tables  
+- Lock or exclude players from your lineup 
 - Specify position for FLEX
 - QB + RB/WR/TE stacking options
 - RB/DST stacks
-- Exclude players opposing DST 
-- Optimize highest projected lineup with PuLP
+- Exclude players opposing your DST 
+- Optimizes highest projected lineup with PuLP
 
 ### How It Works
 1) Fetches contest player pool from DraftKings API
-2) Fetches player projections from Sleeper API
-3) Uses PuLP to optimize highest projected lineups under position/salary constraints
-4) Lets you interactively adjust constraints (locks, exclusions, stacks)
-5) Displays optimized lineup on Streamlit
+2) Fetches projections from Sleeper API and matches to player
+3) Lets you interactively adjust constraints (locks, exclusions, stacks)
+4) Uses PuLP to maximize projected points under DraftKings salary and roster rules
+5) Displays the optimized lineup through Streamlit UI
 
 ### Media
+Coming Soon! 
 
 ### Setup 
    ```sh
