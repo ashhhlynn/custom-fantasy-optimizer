@@ -78,15 +78,18 @@ def display_player_table(dk_players):
             hide_index=True
     )
     qb_stack_select = st.multiselect('Stack QB with', ['RB', 'WR', 'TE'])
+
+    # Unselect option 
     flex_select = st.radio('Require Flex as', ['RB', 'WR', 'TE'], index=None)
+    
     dst_stack_1_select = st.radio('Stack DST and RB', ['Yes', 'No'], index=1)
     dst_stack_2_select = st.radio('Exclude teams opposing DST', ['Yes', 'No'], index=1)
     # Option to require specific position for flex.
-    flex_input = ''
+    flex_input = flex_select
     # Option to require QB + RB, WR, and/or TE stacks from the same team.
-    qb_stack_input = []
+    qb_stack_input = qb_stack_select
     # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
-    dst_stack_input = [0,0]
+    dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
     optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
 
 def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
@@ -137,11 +140,11 @@ def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_in
             prob += lpSum(flex) >= lpSum(qb)
         # Require DST + RB from the same team if specified. 
         dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "DST"])
-        if dst_stack_input[0] == 1:
+        if dst_stack_input[0] == 'Yes':
             rb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'RB'])  
             prob += lpSum(rb) >= lpSum(dst)
         # Require exclusion of teams opposing DST if specified.  
-        if dst_stack_input[1] == 1:
+        if dst_stack_input[1] == 'Yes':
             other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
             prob += lpSum(lpSum(other)) if lpSum(dst) >= 1 else None == 0
 
