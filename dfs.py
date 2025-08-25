@@ -48,57 +48,37 @@ def display_interface(dk_players):
             optimizer_button = st.button("Optimize Lineup")
         # Option to require specific position for flex.
         with col_i_2: 
-            flex_input = st.radio('Require Flex Position', ['RB', 'WR', 'TE'], index=None, horizontal=True)
+            flex_input = st.radio('Specify Flex Position', ['RB', 'WR', 'TE'], index=None, horizontal=True)
         # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
         with col_i_3:    
             dst_stack_1_select = st.radio('Same Team RB/DST Stack', ['Yes', 'No'], index=1, horizontal=True)
         with col_i_4:
             dst_stack_2_select = st.radio('Exclude Teams Opposing DST', ['Yes', 'No'], index=1, horizontal=True)
     dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
-    # Display player queue 
-    players_df = pd.DataFrame.from_dict(dk_players, orient="index")
-    players_df["Lock"] = False
-    players_df["Exclude"] = False
     col1, col2 = st.columns([5, 4]) 
+    # Display player queue
     with col1:
         st.subheader("Player Pool")
-        edited_df = st.data_editor(
-            players_df,
-            height=540,
-            hide_index=True,
-            column_config={
-                "name": st.column_config.Column("Name", disabled=True),
-                "position": st.column_config.Column("Position", disabled=True),
-                "team": st.column_config.Column("Team", disabled=True),
-                "opp": st.column_config.Column("Opp", disabled=True),
-                "salary": st.column_config.Column("Salary", disabled=True),
-                "projection": st.column_config.Column("Projection", disabled=True),
-                "Lock": st.column_config.CheckboxColumn("Lock"),
-                "Exclude": st.column_config.CheckboxColumn("Excl.")
-            },
-            key="player_pool"
-        )      
+        edited_df = display_player_queue(dk_players)      
     # Option to require inclusion or exclusion of specific players.    
     incl_input = edited_df[edited_df["Lock"]].index.tolist()
     excl_input = edited_df[edited_df["Exclude"]].index.tolist()
     # Run optimizer and display results 
     lineup_df = pd.DataFrame({
         "Pos.": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
-        "Name": ["", "", "", "", "", "", "", "", ""],
-        "Team": ["", "", "", "", "", "", "", "", ""],
-        "Salary": ["", "", "", "", "", "", "", "", ""],
-        "Proj.": ["", "", "", "", "", "", "", "", ""]
+        "Name": [""]*9,
+        "Team": [""]*9,
+        "Salary": [""]*9,
+        "Proj.": [""]*9,
     })
-    if optimizer_button:
-        final_lineup, rem_sal, total_proj = optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
-        with col2:
-            st.subheader("Lineup")
+    with col2:
+        st.subheader("Lineup")
+        if optimizer_button:
+            final_lineup, rem_sal, total_proj = optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
             st.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
             st.write("Total Projection", total_proj)
             st.write("Remaining Salary", rem_sal)
-    else:
-        with col2:
-            st.subheader("Lineup")
+        else:
             st.dataframe(
                 lineup_df,
                 height=352,
@@ -106,6 +86,28 @@ def display_interface(dk_players):
                 use_container_width=True
             )
                 
+def display_player_queue(dk_players):
+    players_df = pd.DataFrame.from_dict(dk_players, orient="index")
+    players_df["Lock"] = False
+    players_df["Exclude"] = False
+    edited_df = st.data_editor(
+        players_df,
+        height=540,
+        hide_index=True,
+        column_config={
+            "name": st.column_config.Column("Name", disabled=True),
+            "position": st.column_config.Column("Position", disabled=True),
+            "team": st.column_config.Column("Team", disabled=True),
+            "opp": st.column_config.Column("Opp", disabled=True),
+            "salary": st.column_config.Column("Salary", disabled=True),
+            "projection": st.column_config.Column("Projection", disabled=True),
+            "Lock": st.column_config.CheckboxColumn("Lock"),
+            "Exclude": st.column_config.CheckboxColumn("Excl.")
+        },
+        key="player_pool"
+    )
+    return(edited_df)
+    
 def optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
     # Define PuLP problem and variable. 
     prob = LpProblem('Optimize', LpMaximize)
