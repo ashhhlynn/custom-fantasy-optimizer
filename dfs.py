@@ -49,19 +49,20 @@ def display_interface(dk_players):
     })
     st.set_page_config(layout="wide")    
     st.title("Custom Fantasy Optimizer")
-    col_i_1, col_i_2, col_i_3, col_i_4 = st.columns([3, 3, 3, 3])
-    # Option to require specific position for flex.
-    with col_i_1:
-        flex_input = st.radio('Require Flex Position', ['RB', 'WR', 'TE'], index=None, horizontal=True)
-        optimizer_button = st.button("Optimize Lineup")
-    # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
-    with col_i_2:    
-        dst_stack_1_select = st.radio('Same Team RB/DST Stack', ['Yes', 'No'], index=1, horizontal=True)
-    with col_i_3:
-        dst_stack_2_select = st.radio('Exclude Teams Opposing DST', ['Yes', 'No'], index=1, horizontal=True)
-    # Option to require QB + RB, WR, and/or TE stacks from the same team.
-    with col_i_4: 
-        qb_stack_input = st.multiselect('Same Team QB/Pos. Stack', ['RB', 'WR', 'TE'])
+    with st.container(height=164):
+        col_i_1, col_i_2, col_i_3, col_i_4 = st.columns([2, 2, 2, 4])
+        # Option to require QB + RB, WR, and/or TE stacks from the same team.
+        with col_i_1:
+            qb_stack_input = st.multiselect('Same Team QB/Pos. Stack', ['RB', 'WR', 'TE'])
+            optimizer_button = st.button("Optimize Lineup")
+        # Option to require specific position for flex.
+        with col_i_2: 
+            flex_input = st.radio('Require Flex Position', ['RB', 'WR', 'TE'], index=None, horizontal=True)
+        # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
+        with col_i_3:    
+            dst_stack_1_select = st.radio('Same Team RB/DST Stack', ['Yes', 'No'], index=1, horizontal=True)
+        with col_i_4:
+            dst_stack_2_select = st.radio('Exclude Teams Opposing DST', ['Yes', 'No'], index=1, horizontal=True)
     dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
     players_df["Lock"] = False
     players_df["Exclude"] = False
@@ -70,7 +71,7 @@ def display_interface(dk_players):
         st.subheader("Player Pool")
         edited_df = st.data_editor(
             players_df,
-            height=560,
+            height=540,
             hide_index=True,
             column_config={
                 "name": st.column_config.Column("Name", disabled=True),
@@ -91,8 +92,12 @@ def display_interface(dk_players):
     excl_input = excluded_players.index.tolist()
     # Run optimizer and display results 
     if optimizer_button:
-        dk_players, player_vars, prob = optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
-        display_results(dk_players, player_vars, prob, lineup_df, col2)
+        final_lineup, rem_sal, total_proj = optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
+        with col2:
+            st.subheader("Lineup")
+            st.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
+            st.write("Total Projection", total_proj)
+            st.write("Remaining Salary", rem_sal)
     else:
         with col2:
             st.subheader("Lineup")
@@ -103,7 +108,7 @@ def display_interface(dk_players):
                 use_container_width=True
             )
                 
-def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
+def optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
     # Define PuLP problem and variable. 
     prob = LpProblem('Optimize', LpMaximize)
     player_vars = LpVariable.dicts('Select', dk_players.keys(), 0, 1, cat='Binary')
@@ -136,13 +141,17 @@ def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack
     team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_input)
     # Define PuLP objective to maximize total projection and solve. 
     prob += lpSum(dk_players[p]["projection"] * player_vars[p] for p in dk_players)
-    prob.solve()    
-    return dk_players, player_vars, prob
+    prob.solve()
+    rem_sal = 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players)
+    total_proj = pulp.value(prob.objective)  
+    final_lineup = display_results(dk_players, player_vars, lineup_df)
+    return(final_lineup, rem_sal, total_proj)
 
 def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_input):
     teams = {}
     for data in dk_players.values():
-        teams.update({data['team']: 0}) if data["position"] == 'DST' else None
+        if data["position"] == 'DST':
+            teams.update({data['team']: 0}) 
     for team in teams: 
         # Require QB + RB, WR, and/or TE from the same team if specified.
         for pos in qb_stack_input:
@@ -157,10 +166,11 @@ def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_in
         # Require exclusion of teams opposing DST if specified.  
         if dst_stack_input[1] == 'Yes':
             other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
-            prob += lpSum(lpSum(other)) if lpSum(dst) >= 1 else None == 0
-
-def display_results(dk_players, player_vars, prob, lineup_df, col2):
-    final_lineup = lineup_df.copy()
+            if lpSum(dst) >= 1:
+                prob += lpSum(lpSum(other)) == 0
+    
+def display_results(dk_players, player_vars, lineup_df):
+    final_lineup = lineup_df.copy()    
     for player in dk_players:
         if player_vars[player].varValue == 1:
             pos = dk_players[player]['position']
@@ -177,11 +187,6 @@ def display_results(dk_players, player_vars, prob, lineup_df, col2):
                     final_lineup.at[flex_row[0], "Team"] = dk_players[player]['team']
                     final_lineup.at[flex_row[0], "Salary"] = dk_players[player]['salary']
                     final_lineup.at[flex_row[0], "Proj."] = dk_players[player]['projection']
-    rem_sal = 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players)
-    with col2:
-        st.subheader("Lineup")
-        st.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
-        st.write("Total Projection", pulp.value(prob.objective))
-        st.write("Remaining Salary", rem_sal)
+    return(final_lineup)
 
 fetch_dk_players()
