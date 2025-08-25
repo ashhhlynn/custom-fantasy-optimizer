@@ -35,10 +35,9 @@ def fetch_dk_players():
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'projection': sleeper_players[item['displayName']]}})
                 elif item['displayName'][:15] in sleeper_players:
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'projection': sleeper_players[item['displayName'][:15]]}})
-    display_player_table(dk_players)
-    return dk_players
+    display_interface(dk_players)
 
-def display_player_table(dk_players):
+def display_interface(dk_players):
     # Display Streamlit player and lineup tables 
     players_df = pd.DataFrame.from_dict(dk_players, orient="index")
     lineup_df = pd.DataFrame({
@@ -88,32 +87,10 @@ def display_player_table(dk_players):
     excluded_players = edited_df[edited_df["Exclude"]].copy()    
     incl_input = locked_players.index.tolist()
     excl_input = excluded_players.index.tolist()
+    # Run optimizer and display results 
     if optimizer_button:
         dk_players, player_vars, prob = optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
-        final_lineup = lineup_df.copy()
-        for player in dk_players:
-            if player_vars[player].varValue == 1:
-                pos = dk_players[player]['position']
-                row = final_lineup[(final_lineup["Position"] == pos) & (final_lineup["Name"] == "")].index
-                if len(row) > 0:
-                    final_lineup.at[row[0], "Name"] = dk_players[player]['name'] 
-                    final_lineup.at[row[0], "Team"] = dk_players[player]['team'] 
-                    final_lineup.at[row[0], "Salary"] = dk_players[player]['salary']
-                    final_lineup.at[row[0], "Projection"] = dk_players[player]['projection'] 
-                else:
-                    flex_row = final_lineup[(final_lineup["Position"] == "FLEX") & (final_lineup["Name"] == "")].index
-                    if len(flex_row) > 0 and pos in ['RB', 'WR', 'TE']:
-                        final_lineup.at[flex_row[0], "Name"] = dk_players[player]['name']
-                        final_lineup.at[flex_row[0], "Team"] = dk_players[player]['team']
-
-                        final_lineup.at[flex_row[0], "Salary"] = dk_players[player]['salary']
-                        final_lineup.at[flex_row[0], "Projection"] = dk_players[player]['projection']
-        rem_sal = 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players)
-        with col2:
-            st.subheader("Lineup")
-            st.dataframe(final_lineup, use_container_width=True, height=352, hide_index=True)
-            st.caption(pulp.value(prob.objective))
-            st.caption(rem_sal)
+        display_results(dk_players, player_vars, prob, lineup_df, col2)
     else:
         with col2:
             st.subheader("Lineup")
@@ -179,5 +156,30 @@ def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_in
         if dst_stack_input[1] == 'Yes':
             other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
             prob += lpSum(lpSum(other)) if lpSum(dst) >= 1 else None == 0
+
+def display_results(dk_players, player_vars, prob, lineup_df, col2):
+    final_lineup = lineup_df.copy()
+    for player in dk_players:
+        if player_vars[player].varValue == 1:
+            pos = dk_players[player]['position']
+            row = final_lineup[(final_lineup["Position"] == pos) & (final_lineup["Name"] == "")].index
+            if len(row) > 0:
+                final_lineup.at[row[0], "Name"] = dk_players[player]['name'] 
+                final_lineup.at[row[0], "Team"] = dk_players[player]['team'] 
+                final_lineup.at[row[0], "Salary"] = dk_players[player]['salary']
+                final_lineup.at[row[0], "Projection"] = dk_players[player]['projection'] 
+            else:
+                flex_row = final_lineup[(final_lineup["Position"] == "FLEX") & (final_lineup["Name"] == "")].index
+                if len(flex_row) > 0 and pos in ['RB', 'WR', 'TE']:
+                    final_lineup.at[flex_row[0], "Name"] = dk_players[player]['name']
+                    final_lineup.at[flex_row[0], "Team"] = dk_players[player]['team']
+                    final_lineup.at[flex_row[0], "Salary"] = dk_players[player]['salary']
+                    final_lineup.at[flex_row[0], "Projection"] = dk_players[player]['projection']
+    rem_sal = 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players)
+    with col2:
+        st.subheader("Lineup")
+        st.dataframe(final_lineup, use_container_width=True, height=352, hide_index=True)
+        st.caption(pulp.value(prob.objective))
+        st.caption(rem_sal)
 
 fetch_dk_players()
