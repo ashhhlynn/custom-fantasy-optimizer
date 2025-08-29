@@ -39,7 +39,7 @@ def fetch_sleeper_projections():
 
 def display_streamlit(dk_players):
     st.set_page_config(layout="wide")    
-    st.title("Custom Fantasy Optimizer")
+    st.header("Custom Fantasy Optimizer")
     with st.container(height=110):
         col_i_1, col_i_2, col_i_3, col_i_4 = st.columns([3, 3, 3, 3])
         with col_i_1:
@@ -76,24 +76,17 @@ def display_streamlit(dk_players):
         col3, col4 = st.columns([3, 5]) 
         with col3:
             st.subheader("Lineup")
-        optimizer_button = st.button("Optimize Lineup")
-        with col4:
+        with col4:    
             st.write("")
-        if optimizer_button:
-            final_lineup, rem_sal, total_proj = optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
-            with col4:
-                st.write("Projection", round(total_proj, 2), "Remaining Salary", rem_sal)
-            st.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
-        else:
-            with col4:
-                st.write("Total Projection", round(0, 2), "Remaining Salary", 50000)
-            st.dataframe(
-                lineup_df,
-                height=352,
-                hide_index=True,
-                use_container_width=True,
-                column_config={"Name": st.column_config.Column(width="medium")}
-            )
+            totals_placeholder = st.empty()
+            totals_placeholder.write("Total Projection: 0.00 | Remaining Salary: 50000")
+        lineup_placeholder = st.empty() 
+        lineup_placeholder.dataframe(lineup_df, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
+        if st.button("Optimize Lineup"):
+            player_vars, rem_sal, total_proj = optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
+            totals_placeholder.write(f"Total Projection: {round(total_proj, 2)} | Remaining Salary: {rem_sal}")
+            final_lineup = display_results(dk_players, player_vars, lineup_df)
+            lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
                 
 def display_player_queue(dk_players):
     players_df = pd.DataFrame.from_dict(dk_players, orient="index")
@@ -118,7 +111,7 @@ def display_player_queue(dk_players):
     )
     return(edited_df)
     
-def optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
+def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input):
     # Define PuLP problem and variable. 
     prob = LpProblem('Optimize', LpMaximize)
     player_vars = LpVariable.dicts('Select', dk_players.keys(), 0, 1, cat='Binary')
@@ -154,8 +147,7 @@ def optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_inpu
     prob.solve()
     rem_sal = 50000 - sum(dk_players[p]["salary"] * player_vars[p].varValue for p in dk_players)
     total_proj = pulp.value(prob.objective)  
-    final_lineup = display_results(dk_players, player_vars, lineup_df)
-    return(final_lineup, rem_sal, total_proj)
+    return(player_vars, rem_sal, total_proj)
 
 def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_input):
     teams = {}
