@@ -4,25 +4,11 @@ from pulp import *
 import streamlit as st 
 import pandas as pd 
 
-def fetch_sleeper_players():
-    # Fetch projections from sleeper API.
-    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2023/18?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
-    json_sleeper_data = json.loads(sleeper_API.text)    
-    # Create dictionary of sleeper names and projections. 
-    sleeper_players = {}
-    for item in json_sleeper_data:
-        projection = item['stats'].get('pts_ppr')
-        if projection and item['player']['position'] == 'DEF': 
-            sleeper_players.update({item['player']['last_name']: projection})
-        elif projection: 
-            sleeper_players.update({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
-    return sleeper_players
-
 def fetch_dk_players(): 
     # Fetch contest data from DraftKings API. 
     dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/98582/draftables')
     json_dk_data = json.loads(dk_API.text)
-    sleeper_players = fetch_sleeper_players()       
+    sleeper_players = fetch_sleeper_projections()       
     dk_players = {}
     # Loop through players and skip duplicates. 
     for index, item in enumerate(json_dk_data['draftables']):
@@ -35,25 +21,39 @@ def fetch_dk_players():
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName']]}})
                 elif item['displayName'][:15] in sleeper_players:
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'salary': item['salary'], 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName'][:15]]}})
-    display_interface(dk_players)
+    display_streamlit(dk_players)
 
-def display_interface(dk_players):
+def fetch_sleeper_projections():
+    # Fetch projections from sleeper API.
+    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2023/18?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
+    json_sleeper_data = json.loads(sleeper_API.text)    
+    # Create dictionary of names and projections. 
+    sleeper_players = {}
+    for item in json_sleeper_data:
+        projection = item['stats'].get('pts_ppr')
+        if projection and item['player']['position'] == 'DEF': 
+            sleeper_players.update({item['player']['last_name']: projection})
+        elif projection: 
+            sleeper_players.update({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
+    return sleeper_players
+
+def display_streamlit(dk_players):
     st.set_page_config(layout="wide")    
     st.title("Custom Fantasy Optimizer")
-    with st.container(height=164):
-        col_i_1, col_i_2, col_i_3, col_i_4 = st.columns([2, 2, 2, 4])
-        # Option to require QB + RB, WR, and/or TE stacks from the same team.
+    with st.container(height=110):
+        col_i_1, col_i_2, col_i_3, col_i_4 = st.columns([3, 3, 3, 3])
         with col_i_1:
-            qb_stack_input = st.multiselect('Same Team QB/Pos. Stack', ['RB', 'WR', 'TE'])
-            optimizer_button = st.button("Optimize Lineup")
-        # Option to require specific position for flex.
+            # Option to require specific position for flex.
+            flex_input = st.radio('Customize FLEX', ['RB', 'WR', 'TE'], index=None, horizontal=True)
         with col_i_2: 
-            flex_input = st.radio('Specify Flex Position', ['RB', 'WR', 'TE'], index=None, horizontal=True)
-        # Options to require DST + RB stack from the same team and exclusion of teams opposing DST. 
+            # Option to exclude teams opposing DST 
+            dst_stack_2_select = st.radio('Exclude Opposing DST', ['Yes', 'No'], index=1, horizontal=True)
         with col_i_3:    
-            dst_stack_1_select = st.radio('Same Team RB/DST Stack', ['Yes', 'No'], index=1, horizontal=True)
+            # Options to require DST + RB stack from the same team 
+            dst_stack_1_select = st.radio('RB/DST Stack', ['Yes', 'No'], index=1, horizontal=True)
         with col_i_4:
-            dst_stack_2_select = st.radio('Exclude Teams Opposing DST', ['Yes', 'No'], index=1, horizontal=True)
+            # Option to require QB + RB, WR, and/or TE stacks from the same team.
+            qb_stack_input = st.multiselect('QB Stacks', ['RB', 'WR', 'TE'])
     dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
     col1, col2 = st.columns([5, 4]) 
     # Display player queue
@@ -76,15 +76,16 @@ def display_interface(dk_players):
         col3, col4 = st.columns([3, 5]) 
         with col3:
             st.subheader("Lineup")
+        optimizer_button = st.button("Optimize Lineup")
+        with col4:
+            st.write("")
         if optimizer_button:
             final_lineup, rem_sal, total_proj = optimize_dk_players(lineup_df, dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
             with col4:
-                st.write("")
                 st.write("Projection", round(total_proj, 2), "Remaining Salary", rem_sal)
             st.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
         else:
             with col4:
-                st.write("")
                 st.write("Total Projection", round(0, 2), "Remaining Salary", 50000)
             st.dataframe(
                 lineup_df,
