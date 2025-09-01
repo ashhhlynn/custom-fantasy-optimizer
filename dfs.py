@@ -6,7 +6,7 @@ import pandas as pd
 
 def fetch_dk_players(): 
     # Fetch contest data from DraftKings API. 
-    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/98582/draftables')
+    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/131064/draftables')
     json_dk_data = json.loads(dk_API.text)
     sleeper_players = fetch_sleeper_projections()       
     dk_players = {}
@@ -121,23 +121,22 @@ def optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack
     prob = LpProblem('Optimize', LpMaximize)
     player_vars = LpVariable.dicts('Select', dk_players.keys(), 0, 1, cat='Binary')
     # Define PuLP constraints for maximum salary and players per position. 
-    pos_max = {
-        'QB': 1,
-        'RB': 3,
-        'WR': 4,
-        'TE': 2,
-        'DST': 1
-    }
+    pos_numbers = {
+        'QB': {'min': 1, 'max': 1},
+        'RB': {'min': 2, 'max': 3},
+        'WR': {'min': 3, 'max': 4},
+        'TE': {'min': 1, 'max': 2},
+        'DST': {'min': 1, 'max': 1}
+    }        
     prob += lpSum(dk_players[p]["salary"] * player_vars[p] for p in dk_players) <= 50000
     prob += lpSum(player_vars[p] for p in dk_players) == 9  
     prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
-    for pos, max_count in pos_max.items():
-        prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) <= max_count
+    for pos, numbers in pos_numbers.items():
+        prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) <= numbers['max']
+        prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) >= numbers['min']
         # Require position for flex if specified and update PuLP constraints for players per flex position.
         if flex_input in ["RB", "WR", "TE"] and flex_input == pos:
-            prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == flex_input]) == max_count
-        elif flex_input in ["RB", "WR", "TE"] and pos in ["RB", "WR", "TE"]:
-            prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) == max_count - 1 
+            prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == flex_input]) == numbers['max']       
     # Require inclusion or exclusion of players if specified.
     for p in incl_input:
         if p in player_vars:
