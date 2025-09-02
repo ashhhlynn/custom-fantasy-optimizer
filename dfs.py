@@ -39,32 +39,37 @@ def fetch_sleeper_projections():
 
 def display_streamlit(dk_players):
     st.set_page_config(layout="wide")    
-    col_0, col_00 = st.columns([4, 6])
-    with col_0: 
+    col_0, col_00 = st.columns([4, 4])
+    with col_0:
         st.header("Custom Fantasy Optimizer")
-    with col_00: 
-        with st.container(height=140):
-            col_1, col_2, col_3 = st.columns([1, 2, 4])
+    with col_00:
+        with st.container(height=100):
+            st.write("**Customizations**")
+            col_1, col_2, col_3, col_4, col_5 = st.columns([2, 2, 2, 2, 2])
             with col_1:
-                st.write('Stacks')
-                qb_rb = st.checkbox('QB/RB')
-                qb_wr = st.checkbox('QB/WR')
+                st.write('Stacks')  
             with col_2:
-                st.write('')
-                st.write('')
-                qb_te = st.checkbox('QB/TE')
-                dst_rb = st.checkbox('RB/DST')
+                qb_rb = st.checkbox('QB/RB')
             with col_3:
-                flex_input = st.radio('Require FLEX', ['RB', 'WR', 'TE'], index=None, horizontal=True)
-                dst_input = st.toggle('Exclude Opposing DST')   
+                qb_wr = st.checkbox('QB/WR')
+            with col_4:
+                qb_te = st.checkbox('QB/TE')
+            with col_5:
+                dst_rb = st.checkbox('RB/DST')
+            dst_input = st.toggle('Exclude Opposing DST')   
+            st.write('FLEX Req.')  
+            flex_input = st.radio('', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
     col1, col2 = st.columns([5, 4]) 
     # Display player queue
     with col1:
         st.subheader("Player Pool")
         # Option to require inclusion or exclusion of specific players.    
-        edited_df = display_player_queue(dk_players)      
+        edited_df, errors = display_player_queue(dk_players)    
     # Display lineup table.  
     with col2:
+        if errors: 
+            for e in errors: 
+                st.error(e)  
         totals_placeholder, lineup_placeholder, lineup_df = display_lineup_table()
         # Run optimizer and display results. 
         if st.button("Optimize Lineup"):
@@ -95,7 +100,24 @@ def display_player_queue(dk_players):
         },
         key="player_pool"
     )
-    return(edited_df)
+    pos_caps = {
+        "QB": 1,
+        "RB": 3,
+        "WR": 4,
+        "TE": 2,
+        "DST": 1
+    }
+    errors = []
+    if len(edited_df[edited_df["Lock"]]) > 9:
+        errors.append("❌ You can’t lock more than 9 players.")    
+    flex_count = edited_df[edited_df["Lock"]]["position"].isin(["RB", "WR", "TE"]).sum()
+    if flex_count > 7:
+        errors.append("❌ You can’t lock more than 7 FLEX eligible players.")
+    for pos, cap in pos_caps.items():
+        pos_count = (edited_df[edited_df["Lock"]]["position"] == pos).sum()
+        if pos_count > cap:
+            errors.append(f"❌ You can’t lock more than {cap} {pos}(s).")
+    return(edited_df, errors)
 
 def constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_input):
     constraints = {
