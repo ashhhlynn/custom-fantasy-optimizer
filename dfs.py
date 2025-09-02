@@ -39,35 +39,43 @@ def fetch_sleeper_projections():
 
 def display_streamlit(dk_players):
     st.set_page_config(layout="wide")    
-    st.header("Custom Fantasy Optimizer")
-    with st.container(height=110):
-        col_i_1, col_i_2, col_i_3, col_i_4 = st.columns([3, 3, 3, 3])
-        with col_i_1:
-            # Option to require specific position for flex.
-            flex_input = st.radio('Customize FLEX', ['RB', 'WR', 'TE'], index=None, horizontal=True)
-        with col_i_2: 
-            # Option to exclude teams opposing DST 
-            dst_stack_2_select = st.radio('Exclude Opposing DST', ['Yes', 'No'], index=1, horizontal=True)
-        with col_i_3:    
-            # Options to require DST + RB stack from the same team 
-            dst_stack_1_select = st.radio('RB/DST Stack', ['Yes', 'No'], index=1, horizontal=True)
-        with col_i_4:
-            # Option to require QB + RB, WR, and/or TE stacks from the same team.
-            qb_stack_input = st.multiselect('QB Stacks', ['RB', 'WR', 'TE'])
+    col_0, col_00 = st.columns([4, 6])
+    with col_0: 
+        st.header("Custom Fantasy Optimizer")
+    with col_00: 
+        with st.container(height=140):
+            col_1, col_2, col_3 = st.columns([1, 2, 4])
+            with col_1:
+                st.write('Stacks')
+                qb_rb = st.checkbox('QB/RB')
+                qb_wr = st.checkbox('QB/WR')
+            with col_2:
+                st.write('')
+                st.write('')
+                qb_te = st.checkbox('QB/TE')
+                dst_stack_1_select = st.checkbox('RB/DST')
+            with col_3:
+                flex_input = st.radio('Require FLEX', ['RB', 'WR', 'TE'], index=None, horizontal=True)
+                dst_stack_2_select = st.toggle('Exclude Opposing DST')                      
     dst_stack_input = [dst_stack_1_select, dst_stack_2_select]
     col1, col2 = st.columns([5, 4]) 
     # Display player queue
     with col1:
         st.subheader("Player Pool")
-        edited_df = display_player_queue(dk_players)      
-    # Option to require inclusion or exclusion of specific players.    
-    incl_input = edited_df[edited_df["Lock"]].index.tolist()
-    excl_input = edited_df[edited_df["Exclude"]].index.tolist()
+        # Option to require inclusion or exclusion of specific players.    
+        incl_input, excl_input = display_player_queue(dk_players)      
     # Display lineup table.  
     with col2:
         totals_placeholder, lineup_placeholder, lineup_df = display_lineup_table()
         # Run optimizer and display results. 
         if st.button("Optimize Lineup"):
+            qb_stack_input = []
+            if qb_rb == True:
+                qb_stack_input.append('RB')
+            if qb_wr == True:
+                qb_stack_input.append('WR')
+            if qb_te == True:
+                qb_stack_input.append('TE')
             player_vars, rem_sal, total_proj = optimize_dk_players(dk_players, flex_input, incl_input, excl_input, qb_stack_input, dst_stack_input)
             totals_placeholder.write(f"**Total Projection:** {round(total_proj, 2)} | **Remaining Salary:** ${rem_sal}")
             final_lineup = display_results(dk_players, player_vars, lineup_df)
@@ -94,7 +102,9 @@ def display_player_queue(dk_players):
         },
         key="player_pool"
     )
-    return(edited_df)
+    incl_input = edited_df[edited_df["Lock"]].index.tolist()
+    excl_input = edited_df[edited_df["Exclude"]].index.tolist()
+    return(incl_input, excl_input)
 
 def display_lineup_table():
     col3, col4 = st.columns([3, 7]) 
@@ -166,11 +176,11 @@ def team_constraints(dk_players, player_vars, prob, qb_stack_input, dst_stack_in
             prob += lpSum(flex) >= lpSum(qb)
         # Require DST + RB from the same team if specified. 
         dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "DST"])
-        if dst_stack_input[0] == 'Yes':
+        if dst_stack_input[0] == True:
             rb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'RB'])  
             prob += lpSum(rb) >= lpSum(dst)
         # Require exclusion of teams opposing DST if specified.  
-        if dst_stack_input[1] == 'Yes':
+        if dst_stack_input[1] == True:
             other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
             if lpSum(dst) >= 1:
                 prob += lpSum(lpSum(other)) == 0
