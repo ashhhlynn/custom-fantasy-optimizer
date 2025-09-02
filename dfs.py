@@ -35,7 +35,7 @@ def start_app():
             results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
             if status != "Optimal":
                 st.warning("Error: Optimal solution not found.")
-            totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal}")
+            totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal:05}")
             final_lineup = display_results(results, lineup_df)
             lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
 
@@ -74,7 +74,7 @@ def fetch_dk_players(sleeper_players):
 def display_custom_inputs():
     with st.container(height=110):
         st.write("**Customizations**")
-        col_1, col_2, col_3, col_4, col_5 = st.columns([1, 1, 1, 1, 1])
+        col_1, col_2, col_3, col_4, col_5 = st.columns([2, 3, 3, 3, 4])
         with col_1:
             st.caption('Stacks')  
         with col_2:
@@ -85,9 +85,13 @@ def display_custom_inputs():
             qb_te = st.checkbox('QB/TE')
         with col_5:
             dst_rb = st.checkbox('RB/DST')
-        dst_input = st.toggle('Exclude Opposing DST')   
-        st.caption('FLEX Req.')  
-        flex_input = st.radio('', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
+        col_8, col_9 = st.columns([3, 5])
+        with col_8:
+            st.caption("Exclude teams opposing Defense")
+            st.caption('FLEX Requirement')  
+        with col_9:
+            dst_input = st.toggle('Exclude', label_visibility='collapsed')   
+            flex_input = st.radio('', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
     return qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input
 
 def display_player_queue(dk_players):
@@ -135,7 +139,7 @@ def lock_player_errors(edited_df):
     return errors
 
 def display_lineup_table():
-    col_6, col_7 = st.columns([5, 7]) 
+    col_6, col_7 = st.columns([6, 8]) 
     with col_6:
         st.markdown("#### Lineup")
     with col_7:    
