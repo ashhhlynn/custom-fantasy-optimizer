@@ -139,7 +139,7 @@ def lock_player_errors(edited_df):
     return errors
 
 def display_lineup_table():
-    col_6, col_7 = st.columns([6, 8]) 
+    col_6, col_7 = st.columns([6, 9]) 
     with col_6:
         st.markdown("#### Lineup")
     with col_7:    
