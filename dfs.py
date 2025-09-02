@@ -127,7 +127,7 @@ def display_player_queue(dk_players):
             "opp": st.column_config.Column("Opp.", disabled=True),
             "FFPG": st.column_config.Column("FFPG", disabled=True),
             "projection": st.column_config.Column("Proj.", disabled=True),
-            "salary": st.column_config.Column("Salary", disabled=True),
+            "salary": st.column_config.Column("Sal.", disabled=True),
             "Lock": st.column_config.CheckboxColumn("Lock"),
             "Exclude": st.column_config.CheckboxColumn("Excl.")
         },
