@@ -24,9 +24,8 @@ def start_app():
     # Display custom inputs, player queue, and lineup table. 
     with col_b:
         qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input = display_custom_inputs()
-    col_c, col_d = st.columns([5, 4]) 
+    col_c, col_d = st.columns([4, 3]) 
     with col_c:
-        st.markdown("#### Player Pool")
         edited_df = display_player_queue(dk_players)       
     with col_d:
         # Error if locked players exceed maximums. 
@@ -35,14 +34,16 @@ def start_app():
             st.error(e)
         totals_placeholder, lineup_placeholder, lineup_df = display_lineup_table()
         # Run optimizer and display results. 
-        if st.button("Optimize Lineup"):
-            constraints = constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_input)
-            results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
-            final_lineup = display_results(results, lineup_df)
-            if status != "Optimal":
-                st.warning("Error: Optimal solution not found.")
-            totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal:05}")
-            lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
+        col_e, col_f, col_g = st.columns([1, 2, 1]) 
+        with col_f:
+            if st.button("Optimize Lineup", use_container_width=True):
+                constraints = constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_input)
+                results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
+                final_lineup = display_results(results, lineup_df)
+                if status != "Optimal":
+                    st.warning("Error: Optimal solution not found.")
+                totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal:05}")
+                lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
 
 def fetch_sleeper_projections():
     # Fetch projections from sleeper API.
@@ -100,12 +101,24 @@ def display_custom_inputs():
     return qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input
 
 def display_player_queue(dk_players):
-    players_df = pd.DataFrame.from_dict(dk_players, orient="index")
-    players_df["Lock"] = False
-    players_df["Exclude"] = False
+    col_10, col_11, col_12 = st.columns([6,2,1])
+    with col_10:
+        st.markdown("#### Player Pool")
+    with col_11:
+        filter_players = st.selectbox('', ['All Players', 'QB', 'RB', 'WR', 'TE', 'DST', 'FLEX'], label_visibility='collapsed')
+    if "players_df" not in st.session_state:
+        st.session_state.players_df = pd.DataFrame.from_dict(dk_players, orient="index")
+        st.session_state.players_df["Lock"] = False
+        st.session_state.players_df["Exclude"] = False
+    if filter_players == 'All Players':
+        view_players = st.session_state.players_df
+    elif filter_players == 'FLEX':
+        view_players = st.session_state.players_df[st.session_state.players_df["position"].isin(['RB', 'WR', 'TE'])]
+    else: 
+        view_players = st.session_state.players_df[st.session_state.players_df["position"] == filter_players]
     edited_df = st.data_editor(
-        players_df,
-        height=540,
+        view_players,
+        height=420,
         hide_index=True,
         column_config={
             "name": st.column_config.Column("Name", disabled=True),
@@ -120,7 +133,8 @@ def display_player_queue(dk_players):
         },
         key="player_pool"
     )
-    return edited_df
+    st.session_state.players_df.update(edited_df)
+    return st.session_state.players_df
 
 def lock_player_errors(edited_df):
     errors = []
@@ -137,7 +151,7 @@ def lock_player_errors(edited_df):
     return errors
 
 def display_lineup_table():
-    col_6, col_7 = st.columns([6, 9]) 
+    col_6, col_7 = st.columns([6, 10]) 
     with col_6:
         st.markdown("#### Lineup")
     with col_7:    
