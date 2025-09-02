@@ -221,8 +221,7 @@ def team_constraints(dk_players, player_vars, prob, constraints):
         # Require exclusion of teams opposing DST if specified.  
         if constraints['dst_exclude'] == True:
             other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
-            if lpSum(dst) >= 1:
-                prob += lpSum(lpSum(other)) == 0
+            prob += lpSum(other) <= lpSum((1 - lpSum(dst)) * 9)
 
 def display_results(results, lineup_df):
     final_lineup = lineup_df.copy()    
