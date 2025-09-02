@@ -4,24 +4,40 @@ from pulp import *
 import streamlit as st 
 import pandas as pd 
 
-def fetch_dk_players(): 
-    # Fetch contest data from DraftKings API. 
-    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/131064/draftables')
-    json_dk_data = json.loads(dk_API.text)
+def start_app():
+    # Fetch Sleeper projections and DraftKings contest players.
     sleeper_players = fetch_sleeper_projections()       
-    dk_players = {}
-    # Loop through players and skip duplicates. 
-    for index, item in enumerate(json_dk_data['draftables']):
-        if item['draftStatAttributes'][0].get('id') == 90:                
-            if index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']:
-                parts = item['competition']['name'].split('@')
-                opp = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
-                # Match sleeper projection to player.
-                if item['displayName'] in sleeper_players:
-                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName']], 'salary': item['salary']}})
-                elif item['displayName'][:15] in sleeper_players:
-                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName'][:15]], 'salary': item['salary']}})
-    display_streamlit(dk_players)
+    dk_players = fetch_dk_players(sleeper_players)
+    # Load Streamlit interface.
+    st.set_page_config(layout="wide")    
+    col_a, col_b = st.columns([4, 4])
+    with col_a:
+        st.header("Custom Fantasy Optimizer")
+    # Display custom inputs.
+    with col_b:
+        qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input = display_custom_inputs()
+    col_c, col_d = st.columns([5, 4]) 
+    # Display player queue.
+    with col_c:
+        st.subheader("Player Pool")
+        edited_df = display_player_queue(dk_players)       
+    with col_d:
+        # Display errors for player locking exceeding maximums. 
+        errors = lock_player_errors(edited_df)
+        if errors:
+            for e in errors: 
+                st.error(e)
+        # Display lineup table.
+        totals_placeholder, lineup_placeholder, lineup_df = display_lineup_table()
+        # Run optimizer and display results. 
+        if st.button("Optimize Lineup"):
+            constraints = constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_input)
+            results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
+            if status != "Optimal":
+                st.warning("Error: Optimal solution not found.")
+            totals_placeholder.write(f"**Total Projection:** {round(total_proj, 2)} | **Remaining Salary:** ${rem_sal}")
+            final_lineup = display_results(results, lineup_df)
+            lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
 
 def fetch_sleeper_projections():
     # Fetch projections from sleeper API.
@@ -37,49 +53,42 @@ def fetch_sleeper_projections():
             sleeper_players.update({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
     return sleeper_players
 
-def display_streamlit(dk_players):
-    st.set_page_config(layout="wide")    
-    col_0, col_00 = st.columns([4, 4])
-    with col_0:
-        st.header("Custom Fantasy Optimizer")
-    # Display customization inputs.
-    with col_00:
-        with st.container(height=110):
-            st.write("**Customizations**")
-            col_1, col_2, col_3, col_4, col_5 = st.columns([2, 2, 2, 2, 2])
-            with col_1:
-                st.write('Stacks')  
-            with col_2:
-                qb_rb = st.checkbox('QB/RB')
-            with col_3:
-                qb_wr = st.checkbox('QB/WR')
-            with col_4:
-                qb_te = st.checkbox('QB/TE')
-            with col_5:
-                dst_rb = st.checkbox('RB/DST')
-            dst_input = st.toggle('Exclude Opposing DST')   
-            st.write('FLEX Req.')  
-            flex_input = st.radio('', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
-    col1, col2 = st.columns([5, 4]) 
-    # Display player queue.
-    with col1:
-        st.subheader("Player Pool")
-        edited_df, errors = display_player_queue(dk_players)    
-    # Display lineup table and input errors.   
-    with col2:
-        if errors: 
-            for e in errors: 
-                st.error(e)  
-        totals_placeholder, lineup_placeholder, lineup_df = display_lineup_table()
-        # Run optimizer and display results. 
-        if st.button("Optimize Lineup"):
-            constraints = constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_input)
-            results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
-            if status != "Optimal":
-                st.warning("Error: Optimal solution not found.")
-            totals_placeholder.write(f"**Total Projection:** {round(total_proj, 2)} | **Remaining Salary:** ${rem_sal}")
-            final_lineup = display_results(results, lineup_df)
-            lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
+def fetch_dk_players(sleeper_players): 
+    # Fetch contest data from DraftKings API. 
+    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/131064/draftables')
+    json_dk_data = json.loads(dk_API.text)
+    dk_players = {}
+    # Loop through players and skip duplicates. 
+    for index, item in enumerate(json_dk_data['draftables']):
+        if item['draftStatAttributes'][0].get('id') == 90:                
+            if index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']:
+                parts = item['competition']['name'].split('@')
+                opp = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
+                # Match sleeper projection to player.
+                if item['displayName'] in sleeper_players:
+                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName']], 'salary': item['salary']}})
+                elif item['displayName'][:15] in sleeper_players:
+                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName'][:15]], 'salary': item['salary']}})
+    return dk_players
+
+def display_custom_inputs():
+    with st.container(height=110):
+        st.write("**Customizations**")
+        col_1, col_2, col_3, col_4, col_5 = st.columns([2, 2, 2, 2, 2])
+        with col_1:
+            st.write('Stacks')  
+        with col_2:
+            qb_rb = st.checkbox('QB/RB')
+        with col_3:
+            qb_wr = st.checkbox('QB/WR')
+        with col_4:
+            qb_te = st.checkbox('QB/TE')
+        with col_5:
+            dst_rb = st.checkbox('RB/DST')
+        dst_input = st.toggle('Exclude Opposing DST')   
+        st.write('FLEX Req.')  
+        flex_input = st.radio('', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
+    return qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input
 
 def display_player_queue(dk_players):
     players_df = pd.DataFrame.from_dict(dk_players, orient="index")
@@ -102,7 +111,9 @@ def display_player_queue(dk_players):
         },
         key="player_pool"
     )
-    # Display errors for player locking exceeding maximums. 
+    return edited_df
+
+def lock_player_errors(edited_df):
     pos_caps = {
         "QB": 1,
         "RB": 3,
@@ -120,13 +131,13 @@ def display_player_queue(dk_players):
         pos_count = (edited_df[edited_df["Lock"]]["position"] == pos).sum()
         if pos_count > cap:
             errors.append(f"❌ You can’t lock more than {cap} {pos}(s).")
-    return(edited_df, errors)
+    return errors
 
 def display_lineup_table():
-    col3, col4 = st.columns([3, 9]) 
-    with col3:
+    col_6, col_7 = st.columns([3, 9]) 
+    with col_6:
         st.subheader("Lineup")
-    with col4:    
+    with col_7:    
         st.write("")
         totals_placeholder = st.empty()
         totals_placeholder.write("**Total Projection:** 00.000 | **Remaining Salary:** $50000")
@@ -157,7 +168,7 @@ def constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_inpu
         constraints['qb_stacks'].append('WR')
     if qb_te == True:
         constraints['qb_stacks'].append('TE')
-    return(constraints)
+    return constraints
 
 def optimize_dk_players(dk_players, constraints):
     # Define PuLP problem and variable. 
@@ -200,7 +211,7 @@ def optimize_dk_players(dk_players, constraints):
             rem_sal -= dk_players[player]['salary']
     total_proj = pulp.value(prob.objective)  
     status = LpStatus[prob.status]
-    return(results, rem_sal, total_proj, status)
+    return results, rem_sal, total_proj, status
 
 def team_constraints(dk_players, player_vars, prob, constraints):
     teams = {}
@@ -242,6 +253,6 @@ def display_results(results, lineup_df):
                 final_lineup.at[flex_row[0], "Opp."] = results[player]['opp'] 
                 final_lineup.at[flex_row[0], "Proj."] = results[player]['projection']
                 final_lineup.at[flex_row[0], "Salary"] = results[player]['salary']
-    return(final_lineup)
+    return final_lineup
 
-fetch_dk_players()
+start_app()
