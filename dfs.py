@@ -10,7 +10,7 @@ def start_app():
     dk_players = fetch_dk_players(sleeper_players)
     # Load Streamlit interface.
     st.set_page_config(layout="wide")    
-    col_a, col_b = st.columns([4, 4])
+    col_a, col_b = st.columns([5, 4])
     with col_a:
         st.header("Custom Fantasy Optimizer")
     # Display custom inputs.
@@ -19,7 +19,7 @@ def start_app():
     col_c, col_d = st.columns([5, 4]) 
     # Display player queue.
     with col_c:
-        st.subheader("Player Pool")
+        st.markdown("#### Player Pool")
         edited_df = display_player_queue(dk_players)       
     with col_d:
         # Display errors for player locking exceeding maximums. 
@@ -35,7 +35,7 @@ def start_app():
             results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
             if status != "Optimal":
                 st.warning("Error: Optimal solution not found.")
-            totals_placeholder.write(f"**Total Projection:** {round(total_proj, 2)} | **Remaining Salary:** ${rem_sal}")
+            totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal}")
             final_lineup = display_results(results, lineup_df)
             lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
 
@@ -74,9 +74,9 @@ def fetch_dk_players(sleeper_players):
 def display_custom_inputs():
     with st.container(height=110):
         st.write("**Customizations**")
-        col_1, col_2, col_3, col_4, col_5 = st.columns([2, 2, 2, 2, 2])
+        col_1, col_2, col_3, col_4, col_5 = st.columns([1, 1, 1, 1, 1])
         with col_1:
-            st.write('Stacks')  
+            st.caption('Stacks')  
         with col_2:
             qb_rb = st.checkbox('QB/RB')
         with col_3:
@@ -86,7 +86,7 @@ def display_custom_inputs():
         with col_5:
             dst_rb = st.checkbox('RB/DST')
         dst_input = st.toggle('Exclude Opposing DST')   
-        st.write('FLEX Req.')  
+        st.caption('FLEX Req.')  
         flex_input = st.radio('', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
     return qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input
 
@@ -122,6 +122,7 @@ def lock_player_errors(edited_df):
         "DST": 1
     }
     errors = []
+    edited_df.loc[edited_df["Lock"], "Exclude"] = False
     if len(edited_df[edited_df["Lock"]]) > 9:
         errors.append("❌ You can’t lock more than 9 players.")    
     flex_count = edited_df[edited_df["Lock"]]["position"].isin(["RB", "WR", "TE"]).sum()
@@ -134,13 +135,13 @@ def lock_player_errors(edited_df):
     return errors
 
 def display_lineup_table():
-    col_6, col_7 = st.columns([3, 9]) 
+    col_6, col_7 = st.columns([5, 7]) 
     with col_6:
-        st.subheader("Lineup")
+        st.markdown("#### Lineup")
     with col_7:    
         st.write("")
         totals_placeholder = st.empty()
-        totals_placeholder.write("**Total Projection:** 00.000 | **Remaining Salary:** $50000")
+        totals_placeholder.write("**Projection:** 00.000 | **Rem. Salary:** $50000")
     lineup_df = pd.DataFrame({
         "Pos.": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
         "Name": [""]*9,
