@@ -18,7 +18,7 @@ def start_app():
     dk_players = fetch_dk_players(sleeper_players)
     # Load Streamlit interface.
     st.set_page_config(layout="wide")    
-    col_a, col_b = st.columns([4, 3])
+    col_a, col_b = st.columns([7, 5])
     # Display custom inputs, player queue, and lineup table. 
     with col_a:
         st.header("Custom Fantasy Optimizer")
@@ -80,7 +80,7 @@ def fetch_dk_players(sleeper_players):
 def display_custom_inputs():
     with st.container(height=110):
         st.write("**Customizations**")
-        col_1, col_2, col_3, col_4, col_5 = st.columns([2, 3, 3, 3, 4])
+        col_1, col_2, col_3, col_4, col_5 = st.columns([2, 3, 3, 3, 3])
         with col_1:
             st.caption('Stacks')  
         with col_2:
@@ -101,13 +101,12 @@ def display_custom_inputs():
     return qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input
 
 def display_player_queue(dk_players):
-    col_10, col_11, col_12 = st.columns([4,2,1])
+    col_10, col_11, col_12 = st.columns([5,3,1])
     with col_10:
         st.markdown("#### Player Pool")
     with col_11:
         filter_players = st.selectbox('', ['All Players', 'QB', 'RB', 'WR', 'TE', 'DST', 'FLEX'], label_visibility='collapsed')
-    with col_12:
-        st.write("")
+
     if "players_df" not in st.session_state:
         st.session_state.players_df = pd.DataFrame.from_dict(dk_players, orient="index")
         st.session_state.players_df["Lock"] = False
