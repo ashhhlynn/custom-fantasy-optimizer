@@ -4,6 +4,14 @@ from pulp import *
 import streamlit as st 
 import pandas as pd 
 
+pos_numbers = {
+    'QB': {'min': 1, 'max': 1},
+    'RB': {'min': 2, 'max': 3},
+    'WR': {'min': 3, 'max': 4},
+    'TE': {'min': 1, 'max': 2},
+    'DST': {'min': 1, 'max': 1}
+} 
+
 def start_app():
     # Fetch Sleeper projections and DraftKings contest players.
     sleeper_players = fetch_sleeper_projections()       
@@ -13,30 +21,27 @@ def start_app():
     col_a, col_b = st.columns([5, 4])
     with col_a:
         st.header("Custom Fantasy Optimizer")
-    # Display custom inputs.
+    # Display custom inputs, player queue, and lineup table. 
     with col_b:
         qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input = display_custom_inputs()
     col_c, col_d = st.columns([5, 4]) 
-    # Display player queue.
     with col_c:
         st.markdown("#### Player Pool")
         edited_df = display_player_queue(dk_players)       
     with col_d:
-        # Display errors for player locking exceeding maximums. 
+        # Error if locked players exceed maximums. 
         errors = lock_player_errors(edited_df)
-        if errors:
-            for e in errors: 
-                st.error(e)
-        # Display lineup table.
+        for e in errors: 
+            st.error(e)
         totals_placeholder, lineup_placeholder, lineup_df = display_lineup_table()
         # Run optimizer and display results. 
         if st.button("Optimize Lineup"):
             constraints = constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_input)
             results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
+            final_lineup = display_results(results, lineup_df)
             if status != "Optimal":
                 st.warning("Error: Optimal solution not found.")
             totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal:05}")
-            final_lineup = display_results(results, lineup_df)
             lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
 
 def fetch_sleeper_projections():
@@ -118,13 +123,6 @@ def display_player_queue(dk_players):
     return edited_df
 
 def lock_player_errors(edited_df):
-    pos_caps = {
-        "QB": 1,
-        "RB": 3,
-        "WR": 4,
-        "TE": 2,
-        "DST": 1
-    }
     errors = []
     edited_df.loc[edited_df["Lock"], "Exclude"] = False
     if len(edited_df[edited_df["Lock"]]) > 9:
@@ -132,10 +130,10 @@ def lock_player_errors(edited_df):
     flex_count = edited_df[edited_df["Lock"]]["position"].isin(["RB", "WR", "TE"]).sum()
     if flex_count > 7:
         errors.append("❌ You can’t lock more than 7 FLEX eligible players.")
-    for pos, cap in pos_caps.items():
+    for pos, caps in pos_numbers.items():
         pos_count = (edited_df[edited_df["Lock"]]["position"] == pos).sum()
-        if pos_count > cap:
-            errors.append(f"❌ You can’t lock more than {cap} {pos}(s).")
+        if pos_count > caps['max']:
+            errors.append(f"❌ You can’t lock more than {caps['max']} {pos}(s).")
     return errors
 
 def display_lineup_table():
@@ -180,13 +178,6 @@ def optimize_dk_players(dk_players, constraints):
     prob = LpProblem('Optimize', LpMaximize)
     player_vars = LpVariable.dicts('Select', dk_players.keys(), 0, 1, cat='Binary')
     # Define PuLP constraints for maximum salary and players per position. 
-    pos_numbers = {
-        'QB': {'min': 1, 'max': 1},
-        'RB': {'min': 2, 'max': 3},
-        'WR': {'min': 3, 'max': 4},
-        'TE': {'min': 1, 'max': 2},
-        'DST': {'min': 1, 'max': 1}
-    }        
     prob += lpSum(dk_players[p]["salary"] * player_vars[p] for p in dk_players) <= 50000
     prob += lpSum(player_vars[p] for p in dk_players) == 9  
     prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
@@ -242,8 +233,7 @@ def team_constraints(dk_players, player_vars, prob, constraints):
 def display_results(results, lineup_df):
     final_lineup = lineup_df.copy()    
     for player in results:
-        pos = results[player]['position']
-        row = final_lineup[(final_lineup["Pos."] == pos) & (final_lineup["Name"] == "")].index
+        row = final_lineup[(final_lineup["Pos."] == results[player]['position']) & (final_lineup["Name"] == "")].index
         if len(row) > 0:
             final_lineup.at[row[0], "Name"] = results[player]['name'] 
             final_lineup.at[row[0], "Team"] = results[player]['team'] 
@@ -252,7 +242,7 @@ def display_results(results, lineup_df):
             final_lineup.at[row[0], "Salary"] = results[player]['salary']
         else:
             flex_row = final_lineup[(final_lineup["Pos."] == "FLEX") & (final_lineup["Name"] == "")].index
-            if len(flex_row) > 0 and pos in ['RB', 'WR', 'TE']:
+            if len(flex_row) > 0 and results[player]['position'] in ['RB', 'WR', 'TE']:
                 final_lineup.at[flex_row[0], "Name"] = results[player]['name']
                 final_lineup.at[flex_row[0], "Team"] = results[player]['team']
                 final_lineup.at[flex_row[0], "Opp."] = results[player]['opp'] 
