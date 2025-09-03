@@ -43,7 +43,7 @@ def start_app():
                 if status != "Optimal":
                     st.warning("Error: Optimal solution not found.")
                 totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal:05}")
-                lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
+                lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")})
 
 def fetch_sleeper_projections():
     # Fetch projections from sleeper API.
@@ -80,9 +80,9 @@ def fetch_dk_players(sleeper_players):
 def display_custom_inputs():
     with st.container(height=110):
         st.write("**Customizations**")
-        col_1, col_2, col_3, col_4, col_5 = st.columns([2, 3, 3, 3, 3])
+        col_1, col_2, col_3, col_4, col_5 = st.columns([1, 2, 2, 2, 2])
         with col_1:
-            st.caption('Stacks')  
+            st.caption('Stack')  
         with col_2:
             qb_rb = st.checkbox('QB/RB')
         with col_3:
@@ -106,7 +106,8 @@ def display_player_queue(dk_players):
         st.markdown("#### Player Pool")
     with col_11:
         filter_players = st.selectbox('', ['All Players', 'QB', 'RB', 'WR', 'TE', 'DST', 'FLEX'], label_visibility='collapsed')
-
+    with col_12:
+        st.write('')
     if "players_df" not in st.session_state:
         st.session_state.players_df = pd.DataFrame.from_dict(dk_players, orient="index")
         st.session_state.players_df["Lock"] = False
@@ -168,7 +169,7 @@ def display_lineup_table():
         "Salary": [""]*9,
     })
     lineup_placeholder = st.empty() 
-    lineup_placeholder.dataframe(lineup_df, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")}, use_container_width=True)
+    lineup_placeholder.dataframe(lineup_df, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")})
     return totals_placeholder, lineup_placeholder, lineup_df
 
 def constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_input):
