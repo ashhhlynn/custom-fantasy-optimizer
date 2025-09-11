@@ -12,6 +12,8 @@ pos_numbers = {
     'DST': {'min': 1, 'max': 1}
 } 
 
+teams = {}
+
 def start_app():
     # Fetch Sleeper projections and DraftKings contest players.
     sleeper_players = fetch_sleeper_projections()       
@@ -19,7 +21,7 @@ def start_app():
     # Load Streamlit interface.
     st.set_page_config(layout="wide")    
     col_a, col_ab, col_b = st.columns([15, 1, 11])
-    # Display custom inputs, player queue, and lineup table. 
+    # Display player queue, custom inputs, and lineup table. 
     with col_a:
         st.write('')
         st.header("Custom Fantasy Optimizer")
@@ -29,18 +31,18 @@ def start_app():
     with col_ab:
         st.caption('')  
     with col_b:
-        qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input, rb_max = display_custom_inputs()
+        qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_excl, flex_input, rb_max = display_custom_inputs()
         st.caption('')
-        # Error if locked players exceed maximums. 
+        # Display error if locked players exceed maximums. 
         errors = lock_player_errors(edited_df)
         for e in errors: 
             st.error(e)
         totals_placeholder, lineup_placeholder, lineup_df = display_lineup_table()
-        # Run optimizer and display results. 
+        # Run optimizer and display lineup results. 
         col_e, col_f, col_g = st.columns([1, 2, 1]) 
         with col_f:
             if st.button("Optimize Lineup", use_container_width=True):
-                constraints = constraint_vars(edited_df, flex_input, qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, rb_max)
+                constraints = constraint_vars(edited_df, flex_input, qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_excl, rb_max)
                 results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
                 final_lineup = display_results(results, lineup_df)
                 if status != "Optimal":
@@ -52,7 +54,7 @@ def fetch_sleeper_projections():
     # Fetch projections from sleeper API.
     sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/2?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
     json_sleeper_data = json.loads(sleeper_API.text)    
-    # Create dictionary of names and projections. 
+    # Build dictionary of names and projections. 
     sleeper_players = {}
     for item in json_sleeper_data:
         projection = item['stats'].get('pts_ppr')
@@ -66,22 +68,25 @@ def fetch_dk_players(sleeper_players):
     # Fetch contest data from DraftKings API. 
     dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/133233/draftables')
     json_dk_data = json.loads(dk_API.text)
+    # Build players dictionary with contest player data and projections. 
     dk_players = {}
-    # Loop through players and skip duplicates. 
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90:                
             if index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']:
                 parts = item['competition']['name'].split('@')
                 opp = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
+                info = {str(index):{'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'OPRK': item['draftStatAttributes'][1]['value'], 'salary': item['salary'], 'projection':0}}
                 # Match sleeper projection to player.
                 if item['displayName'] in sleeper_players:
-                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'OPRK': item['draftStatAttributes'][1]['value'], 'projection': sleeper_players[item['displayName']], 'salary': item['salary']}})
+                    info[str(index)]['projection'] = sleeper_players[item['displayName']]
                 elif len(item['displayName'].split(" ", 2)) > 2:
                     short = ' '.join(item['displayName'].split(" ", 2)[:2])
                     if short in sleeper_players:
-                        dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'OPRK': item['draftStatAttributes'][1]['value'], 'projection': sleeper_players[short], 'salary': item['salary']}}) 
-                else:
-                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': 0, 'salary': item['salary']}})
+                        info[str(index)]['projection'] = sleeper_players[short]
+                dk_players.update(info)
+            # Build dictionary of teams.
+            if item['position'] == 'DST' and item['teamAbbreviation'] not in teams:
+                teams.update({item['teamAbbreviation']: 0}) 
     return dk_players
 
 def display_custom_inputs():
@@ -103,7 +108,7 @@ def display_custom_inputs():
         with col_8a:
             st.caption("Excl. Teams Opposing DST")
         with col_8b:
-            dst_input = st.toggle('Exclude', label_visibility='collapsed') 
+            dst_excl = st.toggle('Exclude', label_visibility='collapsed') 
         with col_8c: 
             st.caption("Maximum 1 RB/Team")
         with col_8d:
@@ -112,8 +117,8 @@ def display_custom_inputs():
         with col_9a:             
             st.caption('Customize FLEX Pos.')  
         with col_9b: 
-            flex_input = st.radio('', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
-    return qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input, rb_max
+            flex_input = st.radio('Flex', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
+    return qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_excl, flex_input, rb_max
 
 def display_player_queue(dk_players):
     col_10, col_11 = st.columns([7,3])
@@ -122,7 +127,7 @@ def display_player_queue(dk_players):
         st.markdown("##### Player Pool")
     # Filter display of players by position. 
     with col_11:
-        filter_players = st.selectbox('', ['All Players', 'QB', 'RB', 'WR', 'TE', 'DST', 'FLEX'], label_visibility='collapsed')
+        filter_players = st.selectbox('Filter Players', ['All Players', 'QB', 'RB', 'WR', 'TE', 'DST', 'FLEX'], label_visibility='collapsed')
     if "players_df" not in st.session_state:
         st.session_state.players_df = pd.DataFrame.from_dict(dk_players, orient="index")
         st.session_state.players_df["Lock"] = False
@@ -146,7 +151,7 @@ def display_player_queue(dk_players):
             "OPRK": st.column_config.Column("OPRK", disabled=True),
             "projection": st.column_config.Column("PROJ", disabled=True),
             "salary": st.column_config.Column("SAL", disabled=True),
-            "Lock": st.column_config.CheckboxColumn("🔒"),
+            "Lock": st.column_config.CheckboxColumn("🔐"),
             "Exclude": st.column_config.CheckboxColumn("🚫")
         },
         key="player_pool", 
@@ -170,7 +175,7 @@ def lock_player_errors(edited_df):
     return errors
 
 def display_lineup_table():
-    col_6, col_7 = st.columns([4, 5]) 
+    col_6, col_7 = st.columns([6, 7]) 
     with col_6:
         st.markdown("##### Lineup")
     with col_7:    
@@ -180,21 +185,21 @@ def display_lineup_table():
         "POS": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
         "NAME": [""]*9,
         "TEAM": [""]*9,
-        "PROJ": [""]*9,
         "SAL": [""]*9,
+        "PROJ": [""]*9,
     })
     lineup_placeholder = st.empty() 
     lineup_placeholder.dataframe(lineup_df, height=352, hide_index=True, column_config={"NAME": st.column_config.Column(width="medium"), "TEAM": st.column_config.Column(width="small")})
     return totals_placeholder, lineup_placeholder, lineup_df
 
-def constraint_vars(edited_df, flex_input, qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, rb_max):
+def constraint_vars(edited_df, flex_input, qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_excl, rb_max):
     constraints = {
         'include': edited_df[edited_df["Lock"]].index.tolist(),
         'exclude': edited_df[edited_df["Exclude"]].index.tolist(),
         'flex_req': flex_input,
         'qb_stacks': [],
         'rb_dst': dst_rb,
-        'dst_exclude': dst_input,
+        'dst_exclude': dst_excl,
         'rb_max': rb_max
     }
     if qb_rb == True:
@@ -221,15 +226,13 @@ def optimize_dk_players(dk_players, constraints):
         prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) <= numbers['max']
         prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) >= numbers['min']
         # Require position for flex if specified and update PuLP constraints for players per flex position.
-        if constraints['flex_req'] in ["RB", "WR", "TE"] and constraints['flex_req'] == pos:
+        if constraints['flex_req'] and constraints['flex_req'] == pos:
             prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == constraints['flex_req']]) == numbers['max']       
     # Require inclusion or exclusion of players if specified.
     for p in constraints['include']:
-        if p in player_vars:
-            player_vars[p].lowBound = 1
+        player_vars[p].lowBound = 1
     for p in constraints['exclude']:
-        if p in player_vars:
-            player_vars[p].upBound = 0
+        player_vars[p].upBound = 0
     # Define PuLP constraints for maximum players per team.  
     team_constraints(dk_players, player_vars, prob, constraints)
     # Define PuLP objective to maximize total projection and solve. 
@@ -246,10 +249,6 @@ def optimize_dk_players(dk_players, constraints):
     return results, rem_sal, total_proj, status
 
 def team_constraints(dk_players, player_vars, prob, constraints):
-    teams = {}
-    for data in dk_players.values():
-        if data["position"] == 'DST':
-            teams.update({data['team']: 0}) 
     for team in teams: 
         # Require QB + RB, WR, and/or TE from the same team if specified.
         for pos in constraints['qb_stacks']:
