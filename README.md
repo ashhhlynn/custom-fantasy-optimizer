@@ -2,7 +2,7 @@
 <table>
   <tr>
     <td>
-    Customizable fantasy football lineup optimizer built with Python and linear programming in PuLP. Optimize DraftKings lineups with adjustable stacking, exclusion, player, and position controls for the highest projection under roster and salary constraints. 
+    Customizable fantasy football lineup optimizer built with Python and linear programming in PuLP. Optimize DraftKings lineups with adjustable player locks, exclusions, stacking, and position controls for the highest projection under roster and salary constraints. 
     </td>
   </tr>
 </table> 

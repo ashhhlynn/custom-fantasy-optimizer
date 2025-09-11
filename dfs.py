@@ -49,7 +49,7 @@ def start_app():
 
 def fetch_sleeper_projections():
     # Fetch projections from sleeper API.
-    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2023/18?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
+    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/2?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
     json_sleeper_data = json.loads(sleeper_API.text)    
     # Create dictionary of names and projections. 
     sleeper_players = {}
@@ -63,7 +63,7 @@ def fetch_sleeper_projections():
 
 def fetch_dk_players(sleeper_players): 
     # Fetch contest data from DraftKings API. 
-    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/131064/draftables')
+    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/133233/draftables')
     json_dk_data = json.loads(dk_API.text)
     dk_players = {}
     # Loop through players and skip duplicates. 
@@ -75,8 +75,12 @@ def fetch_dk_players(sleeper_players):
                 # Match sleeper projection to player.
                 if item['displayName'] in sleeper_players:
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName']], 'salary': item['salary']}})
-                elif item['displayName'][:15] in sleeper_players:
-                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName'][:15]], 'salary': item['salary']}})
+                elif len(item['displayName'].split(" ", 2)) > 2:
+                    short = ' '.join(item['displayName'].split(" ", 2)[:2])
+                    if short in sleeper_players:
+                        dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[short], 'salary': item['salary']}}) 
+                else:
+                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': 0, 'salary': item['salary']}})
     return dk_players
 
 def display_custom_inputs():
