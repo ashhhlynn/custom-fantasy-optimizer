@@ -24,6 +24,7 @@
 - QB + RB/WR/TE stacking options
 - RB/DST stacks
 - Exclude players opposing your DST 
+- Set limit of 1 RB per team
 - Optimizes highest projected lineup with PuLP
 
 ### How It Works

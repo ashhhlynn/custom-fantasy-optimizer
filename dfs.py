@@ -21,15 +21,16 @@ def start_app():
     col_a, col_ab, col_b = st.columns([15, 1, 11])
     # Display custom inputs, player queue, and lineup table. 
     with col_a:
+        st.write('')
         st.header("Custom Fantasy Optimizer")
         st.write('')
-        st.write('')
-        st.write('')
+        st.caption('')
         edited_df = display_player_queue(dk_players)     
     with col_ab:
-        st.write('')  
+        st.caption('')  
     with col_b:
-        qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input = display_custom_inputs()
+        qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input, rb_max = display_custom_inputs()
+        st.caption('')
         # Error if locked players exceed maximums. 
         errors = lock_player_errors(edited_df)
         for e in errors: 
@@ -39,12 +40,12 @@ def start_app():
         col_e, col_f, col_g = st.columns([1, 2, 1]) 
         with col_f:
             if st.button("Optimize Lineup", use_container_width=True):
-                constraints = constraint_vars(edited_df, flex_input, qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input)
+                constraints = constraint_vars(edited_df, flex_input, qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, rb_max)
                 results, rem_sal, total_proj, status = optimize_dk_players(dk_players, constraints)
                 final_lineup = display_results(results, lineup_df)
                 if status != "Optimal":
                     st.warning("Error: Optimal solution not found.")
-                totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal:05}")
+                totals_placeholder.write(f"**Proj** {round(total_proj, 2)} | **Rem Salary** ${rem_sal:05}")
                 lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"NAME": st.column_config.Column(width="medium"), "TEAM": st.column_config.Column(width="small")})
 
 def fetch_sleeper_projections():
@@ -84,33 +85,41 @@ def fetch_dk_players(sleeper_players):
     return dk_players
 
 def display_custom_inputs():
-    with st.container(height=110):
+    with st.container(height=106):
         st.write("**Customizations**")
         col_1, col_2, col_3, col_4 = st.columns([6, 7, 6, 6])
         with col_1:
             st.caption('Stacking -- Same Team')  
         with col_2:
             qb_rb = st.checkbox('QB/RB')
-            qb_wr_te = st.checkbox('QB/RB/WR')
+            qb_wr_te = st.checkbox('QB/WR/TE')
         with col_3:
             qb_wr = st.checkbox('QB/WR')
             qb_flex = st.checkbox('QB/FLEX')
         with col_4:
             qb_te = st.checkbox('QB/TE')
             dst_rb = st.checkbox('RB/DST')
-        col_8, col_9 = st.columns([3, 5])
-        with col_8:
-            st.caption("Exclude Teams Opposing DST")
-            st.caption('Customize FLEX')  
-        with col_9:
-            dst_input = st.toggle('Exclude', label_visibility='collapsed')   
+        col_8a, col_8b, col_8c, col_8d = st.columns([3, 2, 3, 4])
+        with col_8a:
+            st.caption("Excl. Teams Opposing DST")
+        with col_8b:
+            dst_input = st.toggle('Exclude', label_visibility='collapsed') 
+        with col_8c: 
+            st.caption("Maximum 1 RB/Team")
+        with col_8d:
+            rb_max = st.toggle('Max', label_visibility="collapsed")
+        col_9a, col_9b = st.columns([4, 13])
+        with col_9a:             
+            st.caption('Customize FLEX Pos.')  
+        with col_9b: 
             flex_input = st.radio('', ['RB', 'WR', 'TE'],  label_visibility="collapsed", index=None, horizontal=True)
-    return qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input
+    return qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, flex_input, rb_max
 
 def display_player_queue(dk_players):
     col_10, col_11 = st.columns([7,3])
     with col_10:
-        st.markdown("#### Player Pool")
+        st.write(" ")
+        st.markdown("##### Player Pool")
     # Filter display of players by position. 
     with col_11:
         filter_players = st.selectbox('', ['All Players', 'QB', 'RB', 'WR', 'TE', 'DST', 'FLEX'], label_visibility='collapsed')
@@ -161,13 +170,12 @@ def lock_player_errors(edited_df):
     return errors
 
 def display_lineup_table():
-    col_6, col_7 = st.columns([4, 8]) 
+    col_6, col_7 = st.columns([4, 5]) 
     with col_6:
-        st.markdown("#### Lineup")
+        st.markdown("##### Lineup")
     with col_7:    
-        st.write("")
         totals_placeholder = st.empty()
-        totals_placeholder.write("**Projection:** 00.000 | **Rem. Salary:** $50000")
+        totals_placeholder.write("**Proj** 00.000 | **Rem Salary** $50000")
     lineup_df = pd.DataFrame({
         "POS": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
         "NAME": [""]*9,
@@ -179,14 +187,15 @@ def display_lineup_table():
     lineup_placeholder.dataframe(lineup_df, height=352, hide_index=True, column_config={"NAME": st.column_config.Column(width="medium"), "TEAM": st.column_config.Column(width="small")})
     return totals_placeholder, lineup_placeholder, lineup_df
 
-def constraint_vars(edited_df, flex_input, qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input):
+def constraint_vars(edited_df, flex_input, qb_flex, qb_wr_te, qb_rb, qb_wr, qb_te, dst_rb, dst_input, rb_max):
     constraints = {
         'include': edited_df[edited_df["Lock"]].index.tolist(),
         'exclude': edited_df[edited_df["Exclude"]].index.tolist(),
         'flex_req': flex_input,
         'qb_stacks': [],
         'rb_dst': dst_rb,
-        'dst_exclude': dst_input
+        'dst_exclude': dst_input,
+        'rb_max': rb_max
     }
     if qb_rb == True:
         constraints['qb_stacks'].append('RB')
@@ -245,20 +254,23 @@ def team_constraints(dk_players, player_vars, prob, constraints):
         # Require QB + RB, WR, and/or TE from the same team if specified.
         for pos in constraints['qb_stacks']:
             qb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "QB"])
-            if pos == 'FLEX':
-                flex = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] in ["RB", "WR", "TE"]])  
-                prob += lpSum(flex) >= lpSum(qb)
             if pos == 'WR/TE':
                 wr_te = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] in ["WR", "TE"]])  
                 prob += lpSum(wr_te) >= lpSum(qb)
+            elif pos == 'FLEX':
+                flex = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] in ["RB", "WR", "TE"]])  
+                prob += lpSum(flex) >= lpSum(qb)
             else:
                 position = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == pos])  
                 prob += lpSum(position) >= lpSum(qb)
         # Require DST + RB from the same team if specified. 
         dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "DST"])
+        rb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'RB'])  
         if constraints['rb_dst'] == True:
-            rb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'RB'])  
             prob += lpSum(rb) >= lpSum(dst)
+        # Require maximum of 1 RB per team if specified. 
+        if constraints['rb_max'] == True:
+            prob += lpSum(rb) <= 1
         # Require exclusion of teams opposing DST if specified.  
         if constraints['dst_exclude'] == True:
             other = lpSum([player_vars[k] for k in dk_players if dk_players[k]['opp'] == team and dk_players[k]['position'] != 'DST'])  
