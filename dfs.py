@@ -18,7 +18,7 @@ def start_app():
     dk_players = fetch_dk_players(sleeper_players)
     # Load Streamlit interface.
     st.set_page_config(layout="wide")    
-    col_a, col_ab, col_b = st.columns([10, 1, 8])
+    col_a, col_ab, col_b = st.columns([15, 1, 11])
     # Display custom inputs, player queue, and lineup table. 
     with col_a:
         st.header("Custom Fantasy Optimizer")
@@ -45,7 +45,7 @@ def start_app():
                 if status != "Optimal":
                     st.warning("Error: Optimal solution not found.")
                 totals_placeholder.write(f"**Projection:** {round(total_proj, 2)} | **Rem. Salary:** ${rem_sal:05}")
-                lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")})
+                lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={"NAME": st.column_config.Column(width="medium"), "TEAM": st.column_config.Column(width="small")})
 
 def fetch_sleeper_projections():
     # Fetch projections from sleeper API.
@@ -74,11 +74,11 @@ def fetch_dk_players(sleeper_players):
                 opp = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
                 # Match sleeper projection to player.
                 if item['displayName'] in sleeper_players:
-                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[item['displayName']], 'salary': item['salary']}})
+                    dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'OPRK': item['draftStatAttributes'][1]['value'], 'projection': sleeper_players[item['displayName']], 'salary': item['salary']}})
                 elif len(item['displayName'].split(" ", 2)) > 2:
                     short = ' '.join(item['displayName'].split(" ", 2)[:2])
                     if short in sleeper_players:
-                        dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': sleeper_players[short], 'salary': item['salary']}}) 
+                        dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'OPRK': item['draftStatAttributes'][1]['value'], 'projection': sleeper_players[short], 'salary': item['salary']}}) 
                 else:
                     dk_players.update({str(index): {'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opp, 'FFPG': item['draftStatAttributes'][0]['value'], 'projection': 0, 'salary': item['salary']}})
     return dk_players
@@ -88,7 +88,7 @@ def display_custom_inputs():
         st.write("**Customizations**")
         col_1, col_2, col_3, col_4, col_5 = st.columns([1, 2, 2, 2, 2])
         with col_1:
-            st.caption('Stack')  
+            st.caption('Team Stack')  
         with col_2:
             qb_rb = st.checkbox('QB/RB')
         with col_3:
@@ -127,15 +127,16 @@ def display_player_queue(dk_players):
         height=420,
         hide_index=True,
         column_config={
-            "name": st.column_config.Column("Name", disabled=True),
-            "position": st.column_config.Column("Pos.", disabled=True),
-            "team": st.column_config.Column("Team", disabled=True),
-            "opp": st.column_config.Column("Opp.", disabled=True),
+            "name": st.column_config.Column("NAME", disabled=True),
+            "position": st.column_config.Column("POS", disabled=True),
+            "team": st.column_config.Column("TEAM", disabled=True),
+            "opp": st.column_config.Column("OPP", disabled=True),
             "FFPG": st.column_config.Column("FFPG", disabled=True),
-            "projection": st.column_config.Column("Proj.", disabled=True),
-            "salary": st.column_config.Column("Sal.", disabled=True),
-            "Lock": st.column_config.CheckboxColumn("Lock"),
-            "Exclude": st.column_config.CheckboxColumn("Excl.")
+            "OPRK": st.column_config.Column("OPRK", disabled=True),
+            "projection": st.column_config.Column("PROJ", disabled=True),
+            "salary": st.column_config.Column("SAL", disabled=True),
+            "Lock": st.column_config.CheckboxColumn("🔒"),
+            "Exclude": st.column_config.CheckboxColumn("🚫")
         },
         key="player_pool", 
         use_container_width=True
@@ -158,7 +159,7 @@ def lock_player_errors(edited_df):
     return errors
 
 def display_lineup_table():
-    col_6, col_7 = st.columns([6, 10]) 
+    col_6, col_7 = st.columns([4, 8]) 
     with col_6:
         st.markdown("#### Lineup")
     with col_7:    
@@ -166,15 +167,14 @@ def display_lineup_table():
         totals_placeholder = st.empty()
         totals_placeholder.write("**Projection:** 00.000 | **Rem. Salary:** $50000")
     lineup_df = pd.DataFrame({
-        "Pos.": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
-        "Name": [""]*9,
-        "Team": [""]*9,
-        "Opp.":[""]*9,
-        "Proj.": [""]*9,
-        "Salary": [""]*9,
+        "POS": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"],
+        "NAME": [""]*9,
+        "TEAM": [""]*9,
+        "PROJ": [""]*9,
+        "SAL": [""]*9,
     })
     lineup_placeholder = st.empty() 
-    lineup_placeholder.dataframe(lineup_df, height=352, hide_index=True, column_config={"Name": st.column_config.Column(width="medium")})
+    lineup_placeholder.dataframe(lineup_df, height=352, hide_index=True, column_config={"NAME": st.column_config.Column(width="medium"), "TEAM": st.column_config.Column(width="small")})
     return totals_placeholder, lineup_placeholder, lineup_df
 
 def constraint_vars(edited_df, flex_input, qb_rb, qb_wr, qb_te, dst_rb, dst_input):
@@ -254,21 +254,19 @@ def team_constraints(dk_players, player_vars, prob, constraints):
 def display_results(results, lineup_df):
     final_lineup = lineup_df.copy()    
     for player in results:
-        row = final_lineup[(final_lineup["Pos."] == results[player]['position']) & (final_lineup["Name"] == "")].index
+        row = final_lineup[(final_lineup["POS"] == results[player]['position']) & (final_lineup["NAME"] == "")].index
         if len(row) > 0:
-            final_lineup.at[row[0], "Name"] = results[player]['name'] 
-            final_lineup.at[row[0], "Team"] = results[player]['team'] 
-            final_lineup.at[row[0], "Opp."] = results[player]['opp'] 
-            final_lineup.at[row[0], "Proj."] = results[player]['projection'] 
-            final_lineup.at[row[0], "Salary"] = results[player]['salary']
+            final_lineup.at[row[0], "NAME"] = results[player]['name'] 
+            final_lineup.at[row[0], "TEAM"] = f"{results[player]['team']} - {results[player]['opp']}"
+            final_lineup.at[row[0], "PROJ"] = results[player]['projection'] 
+            final_lineup.at[row[0], "SAL"] = results[player]['salary']
         else:
-            flex_row = final_lineup[(final_lineup["Pos."] == "FLEX") & (final_lineup["Name"] == "")].index
+            flex_row = final_lineup[(final_lineup["POS"] == "FLEX") & (final_lineup["NAME"] == "")].index
             if len(flex_row) > 0 and results[player]['position'] in ['RB', 'WR', 'TE']:
-                final_lineup.at[flex_row[0], "Name"] = results[player]['name']
-                final_lineup.at[flex_row[0], "Team"] = results[player]['team']
-                final_lineup.at[flex_row[0], "Opp."] = results[player]['opp'] 
-                final_lineup.at[flex_row[0], "Proj."] = results[player]['projection']
-                final_lineup.at[flex_row[0], "Salary"] = results[player]['salary']
+                final_lineup.at[flex_row[0], "NAME"] = results[player]['name']
+                final_lineup.at[flex_row[0], "TEAM"] = f"{results[player]['team']} - {results[player]['opp']}"
+                final_lineup.at[flex_row[0], "PROJ"] = results[player]['projection']
+                final_lineup.at[flex_row[0], "SAL"] = results[player]['salary']
     return final_lineup
 
 start_app()
