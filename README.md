@@ -30,7 +30,7 @@
 ### How It Works
 1) Fetches player pool for Sunday Classic contests from DraftKings API
 2) Fetches PPR projections from Sleeper API and matches to player
-3) Lets you interactively adjust constraints (locks, exclusions, stacks)
+3) Lets you interactively adjust constraints (locks, exclusions, stacks, position limits)
 4) Uses PuLP to maximize projected points under DraftKings salary and roster rules
 5) Displays the optimized lineup through Streamlit UI
 
