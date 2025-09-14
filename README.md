@@ -21,8 +21,8 @@
 - Interactive sortable queue and lineup tables  
 - Lock or exclude players from your lineup 
 - Specify position for FLEX
-- QB + RB/WR/TE stacking options
-- RB/DST stacks
+- QB + RB/WR/TE stacks (team and opponent)
+- RB + DST stacks
 - Exclude players opposing your DST 
 - Set limit of 1 RB per team
 - Optimizes highest projected lineup with PuLP

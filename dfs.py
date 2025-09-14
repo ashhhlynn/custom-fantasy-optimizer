@@ -70,6 +70,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
         st.markdown('#### Custom Fantasy Optimizer')
         input_controls = display_input_controls()
     st.markdown('')
+    display_games()
     col_d, col_e, col_f = st.columns([17,1,12])
     with col_d:
         edited_df, queue_controls = display_players_queue(players_df)
@@ -115,28 +116,33 @@ def display_input_controls():
             dst_rb = st.checkbox('RB/DST')
         col_7, col_8, col_9, col_10, col_11, col_12 = st.columns([2,1,1,1,1,2])
         with col_7: 
-            st.markdown('Exclude Opposing DST')
+            st.markdown('Exclude Teams Opposing DST')
         with col_8:
             dst_excl = st.toggle('Excl.', label_visibility='collapsed') 
         with col_9:
-            st.markdown('Max 1 RB')
+            st.markdown('1 RB per Team')
         with col_10:
             rb_max = st.toggle('Max,', label_visibility='collapsed')
         with col_11:
             st.markdown('Custom FLEX')  
         with col_12:
             flex_input = st.radio('Flex', ['RB', 'WR', 'TE'], label_visibility='collapsed', index=None, horizontal=True)    
-    qb_opp_stacks = {'QB_RB_OPP': qb_rb_opp, 'QB_WR_OPP': qb_wr_opp, 'QB_TE_OPP': qb_te_opp}
-    qb_team_stacks = {'QB_RB': qb_rb, 'QB_WR': qb_wr, 'QB_TE': qb_te, 'QB_WR_TE': qb_wr_te, 'QB_RB_WR_TE': qb_flex}
     input_controls = {
-        'qb_stacks_team': qb_team_stacks,
-        'qb_stacks_opp': qb_opp_stacks,
+        'qb_stacks_team': {'QB_RB': qb_rb, 'QB_WR': qb_wr, 'QB_TE': qb_te, 'QB_WR_TE': qb_wr_te, 'QB_RB_WR_TE': qb_flex},
+        'qb_stacks_opp': {'QB_RB_OPP': qb_rb_opp, 'QB_WR_OPP': qb_wr_opp, 'QB_TE_OPP': qb_te_opp},
         'RB_DST': dst_rb,
         'dst_exclude_opp': dst_excl,
         'rb_max': rb_max,
         'flex_req': flex_input
     }
     return input_controls
+
+def display_games():
+    games = {}
+    for team in teams:
+        if teams[team] not in games:
+            games.update({team: teams[team]})
+    return games
 
 def display_players_queue(players_df):
     with st.container():
@@ -204,16 +210,14 @@ def customize_constraints(input_controls, queue_controls):
     }
     player_pos_constraints = dict(queue_controls)
     player_pos_constraints.update({'flex_req': input_controls['flex_req']})
-    if input_controls['qb_stacks_team']['QB_RB'] == True:
-        team_constraints['qb_stacks'].append('RB')
-    if input_controls['qb_stacks_team']['QB_WR'] == True:
-        team_constraints['qb_stacks'].append('WR')
-    if input_controls['qb_stacks_team']['QB_TE'] == True:
-        team_constraints['qb_stacks'].append('TE')
-    if input_controls['qb_stacks_team']['QB_RB_WR_TE'] == True:
-        team_constraints['qb_stacks'].append('FLEX')
-    if input_controls['qb_stacks_team']['QB_WR_TE'] == True:
-        team_constraints['qb_stacks'].append('WR_TE')
+    for key, value in input_controls['qb_stacks_team'].items():
+        if key == 'QB_WR_TE' and value:
+            team_constraints['qb_stacks'].append('WR_TE') 
+        elif key == 'QB_RB_WR_TE' and value:
+            team_constraints['qb_stacks'].append('FLEX') 
+        elif value:
+            abbr = key[3:5]
+            team_constraints['qb_stacks'].append(abbr) 
     for key, value in input_controls['qb_stacks_opp'].items():
         if value:
             abbr = key[3:5]
