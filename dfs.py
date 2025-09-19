@@ -68,7 +68,6 @@ def load_streamlit(dk_players, players_df, lineup_df):
     with col_a:
         st.markdown('')
         st.markdown('')
-        st.markdown('')
         games = sort_games()
         display_game_buttons(games)
         st.markdown('')
@@ -102,14 +101,14 @@ def load_streamlit(dk_players, players_df, lineup_df):
                 final_lineup = display_results(results, lineup_df)
                 if status != 'Optimal':
                     st.warning('Error: Optimal solution not found.')
-                lineup_placeholder.dataframe(final_lineup, height=352, column_config={'NAME': st.column_config.Column(width=130), 'TEAM': st.column_config.Column(width=70)}, hide_index=True, use_container_width=True)
+                lineup_placeholder.dataframe(final_lineup, height=352, column_config={'NAME': st.column_config.Column(width=140)}, hide_index=True, use_container_width=True)
                 totals_placeholder.write(f'**Projection** {round(total_proj, 2)}  \n**Rem. Salary** ${rem_sal}')
 
 def display_input_controls():
     custom_container = st.container(border=True)
     with custom_container:
         st.caption('⚙️ **Custom**')
-        team_stack_expand = custom_container.expander("Stacks - Team")
+        team_stack_expand = custom_container.expander("**Stacks** - Team")
         with team_stack_expand:
             col_s1, col_s2 = st.columns([3,4])
             with col_s1:
@@ -120,15 +119,18 @@ def display_input_controls():
                 qb_flex = st.checkbox('QB + FLEX')
                 qb_wr_te = st.checkbox('QB + WR or TE')
                 dst_rb = st.checkbox('RB + DST')
-        opp_stack_expand = st.expander("Stacks - Opposing")
+        opp_stack_expand = st.expander("**Stacks** - Opposing")
         with opp_stack_expand:
             qb_rb_opp = st.checkbox('QB + Opp RB')
             qb_wr_opp = st.checkbox('QB + Opp WR')
             qb_te_opp = st.checkbox('QB + Opp TE')
         options = ["RB", "WR", "TE"]
-        flex_input = st.pills("Specify FLEX Position", options, selection_mode="single")
-        dst_excl = st.toggle("Exclude Opposing DST")
-        rb_max = st.toggle("Maximum 1 RB on Team")
+        col_pt1, col_pt2 = st.columns([9,10])
+        with col_pt1:
+            flex_input = st.pills("Specify FLEX Position", options, selection_mode="single",)
+        with col_pt2:
+            dst_excl = st.toggle("Exclude Opp. DST")
+            rb_max = st.toggle("Max. 1 RB / Team")
         input_controls = {
             'qb_stacks_team': {
                 'QB_RB': qb_rb, 
@@ -196,7 +198,7 @@ def display_players_queue(players_df):
 def display_lineup(lineup_df):
     with st.container():
         lineup_placeholder = st.empty() 
-        lineup_placeholder.dataframe(lineup_df, column_config={'NAME': st.column_config.Column(width=130), 'TEAM': st.column_config.Column(width=70)}, height=352, hide_index=True, use_container_width=True)
+        lineup_placeholder.dataframe(lineup_df, column_config={'NAME': st.column_config.Column(width=140)}, height=352, hide_index=True, use_container_width=True)
     return lineup_placeholder
 
 def lock_player_errors(edited_df):
@@ -297,14 +299,14 @@ def display_results(results, lineup_df):
         row = final_lineup[(final_lineup["POS"] == results[player]['position']) & (final_lineup["NAME"] == "")].index
         if len(row) > 0:
             final_lineup.at[row[0], "NAME"] = results[player]['name'] 
-            final_lineup.at[row[0], "TEAM"] = f"{results[player]['team']} ({results[player]['opp']})"
+            final_lineup.at[row[0], "TEAM"] = f"{results[player]['team']}"
             final_lineup.at[row[0], "PROJ"] = results[player]['projection'] 
             final_lineup.at[row[0], "SAL"] = results[player]['salary']
         else:
             flex_row = final_lineup[(final_lineup["POS"] == "FLEX") & (final_lineup["NAME"] == "")].index
             if len(flex_row) > 0 and results[player]['position'] in ['RB', 'WR', 'TE']:
                 final_lineup.at[flex_row[0], "NAME"] = results[player]['name']
-                final_lineup.at[flex_row[0], "TEAM"] = f"{results[player]['team']} ({results[player]['opp']})"
+                final_lineup.at[flex_row[0], "TEAM"] = f"{results[player]['team']}"
                 final_lineup.at[flex_row[0], "PROJ"] = results[player]['projection']
                 final_lineup.at[flex_row[0], "SAL"] = results[player]['salary']
     return final_lineup
