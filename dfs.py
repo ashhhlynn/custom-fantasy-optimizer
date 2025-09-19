@@ -29,7 +29,7 @@ def run_app():
     load_streamlit(dk_players, players_df, lineup_df)
 
 def fetch_sleeper_projections():
-    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/2?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
+    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/3?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
     json_sleeper_data = json.loads(sleeper_API.text)    
     sleeper_players = {}
     for item in json_sleeper_data:
@@ -41,7 +41,7 @@ def fetch_sleeper_projections():
     return sleeper_players
 
 def fetch_dk_players(sleeper_players): 
-    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/133233/draftables')
+    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/133903/draftables')
     json_dk_data = json.loads(dk_API.text)
     dk_players = {}
     for index, item in enumerate(json_dk_data['draftables']):
@@ -63,15 +63,27 @@ def fetch_dk_players(sleeper_players):
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')    
-    col_a, col_b, col_c = st.columns([1,9,1])
-    col_a.empty() 
-    col_c.empty()
-    with col_b:
-        st.markdown('#### Custom Fantasy Optimizer')
+    st.markdown('#### Custom Fantasy Optimizer')
+    col_a, col_b, col_c = st.columns([22,2,12])
+    with col_a:
+        st.markdown('')
+        st.markdown('')
+        st.markdown('')
+        games = sort_games()
+        display_game_buttons(games)
+        st.markdown('')
+        st.markdown('')
+        st.markdown("##### Players")
+        col_a1, col_a2, col_a3 = st.columns([3,1,2])
+        with col_a1:
+            st.text_input('', 'Search', disabled=True, label_visibility='collapsed')
+        col_a2.empty()
+        with col_a3:
+            st.selectbox('Filters', ("All Players", "QB", "RB", "WR", "TE", "DST", "FLEX"), disabled=True, label_visibility='collapsed')
+    col_b.empty()
+    with col_c:
         input_controls = display_input_controls()
-    st.markdown('')
-    display_games()
-    col_d, col_e, col_f = st.columns([17,1,12])
+    col_d, col_e, col_f = st.columns([22,2,12])
     with col_d:
         edited_df, queue_controls = display_players_queue(players_df)
     col_e.empty()
@@ -79,77 +91,90 @@ def load_streamlit(dk_players, players_df, lineup_df):
         errors = lock_player_errors(edited_df)
         for e in errors: 
             st.error(e)          
-        totals_placeholder, lineup_placeholder = display_lineup(lineup_df)
-        col_g, col_h, col_i = st.columns([1,2,1])
-        col_g.empty()
-        col_i.empty()
-        with col_h: 
-            if st.button('Optimize Lineup', use_container_width=True):
+        lineup_placeholder = display_lineup(lineup_df)
+        col_g, col_h, col_i = st.columns([2,1,2])
+        col_h.empty()
+        totals_placeholder = col_i.empty()        
+        totals_placeholder.markdown(f"**Projection** 0.00  \n**Rem. Salary** $50000")
+        with col_g: 
+            if st.button('Optimize', use_container_width=True, type="primary"):
                 team_constraints, player_pos_constraints = customize_constraints(input_controls, queue_controls)
                 results, rem_sal, total_proj, status = optimize_dk_players(dk_players, team_constraints, player_pos_constraints)
                 final_lineup = display_results(results, lineup_df)
                 if status != 'Optimal':
                     st.warning('Error: Optimal solution not found.')
-                totals_placeholder.write(f'**Proj** {round(total_proj, 2)} | **Rem Salary** ${rem_sal}')
-                lineup_placeholder.dataframe(final_lineup, height=352, hide_index=True, column_config={'NAME': st.column_config.Column(width='medium'), 'TEAM': st.column_config.Column(width='small')})
+                lineup_placeholder.dataframe(final_lineup, height=352, column_config={'NAME': st.column_config.Column(width=130), 'TEAM': st.column_config.Column(width=70)}, hide_index=True, use_container_width=True)
+                totals_placeholder.write(f'**Projection** {round(total_proj, 2)}  \n**Rem. Salary** ${rem_sal}')
 
 def display_input_controls():
-    with st.container():
-        col_0, col_1, col_2, col_3, col_4, col_5, col_6 = st.columns([2,1,1,1,1,1,1])
-        with col_0: 
-            st.markdown('Stacks -- Same Team')   
-            st.markdown('Stacks -- Opposing')   
-        with col_1:
-            qb_rb = st.checkbox('QB/RB', key='RB TEAM')
-            qb_rb_opp = st.checkbox('QB/RB', key='RB OPP')
-        with col_2:
-            qb_wr = st.checkbox('QB/WR', key='WR TEAM')
-            qb_wr_opp = st.checkbox('QB/WR', key='WR OPP')
-        with col_3:
-            qb_te = st.checkbox('QB/TE', key='TE TEAM')
-            qb_te_opp = st.checkbox('QB/TE', key='TE OPP')
-        with col_4:
-            qb_flex= st.checkbox('QB/FLEX')
-        with col_5:
-            qb_wr_te = st.checkbox('QB/WR or TE')
-        with col_6:
-            dst_rb = st.checkbox('RB/DST')
-        col_7, col_8, col_9, col_10, col_11, col_12 = st.columns([2,1,1,1,1,2])
-        with col_7: 
-            st.markdown('Exclude Teams Opposing DST')
-        with col_8:
-            dst_excl = st.toggle('Excl.', label_visibility='collapsed') 
-        with col_9:
-            st.markdown('1 RB per Team')
-        with col_10:
-            rb_max = st.toggle('Max,', label_visibility='collapsed')
-        with col_11:
-            st.markdown('Custom FLEX')  
-        with col_12:
-            flex_input = st.radio('Flex', ['RB', 'WR', 'TE'], label_visibility='collapsed', index=None, horizontal=True)    
-    input_controls = {
-        'qb_stacks_team': {'QB_RB': qb_rb, 'QB_WR': qb_wr, 'QB_TE': qb_te, 'QB_WR_TE': qb_wr_te, 'QB_RB_WR_TE': qb_flex},
-        'qb_stacks_opp': {'QB_RB_OPP': qb_rb_opp, 'QB_WR_OPP': qb_wr_opp, 'QB_TE_OPP': qb_te_opp},
-        'RB_DST': dst_rb,
-        'dst_exclude_opp': dst_excl,
-        'rb_max': rb_max,
-        'flex_req': flex_input
-    }
-    return input_controls
+    custom_container = st.container(border=True)
+    with custom_container:
+        st.caption(':gear: **Customize**')
+        team_stack_expand = custom_container.expander(":grey[Stacks - Team]")
+        with team_stack_expand:
+            col_s1, col_s2 = st.columns([3,4])
+            with col_s1:
+                qb_rb = st.checkbox('QB + RB')
+                qb_wr = st.checkbox('QB + WR')
+                qb_te = st.checkbox('QB + TE')
+            with col_s2:     
+                qb_flex = st.checkbox('QB + FLEX')
+                qb_wr_te = st.checkbox('QB + WR or TE')
+                dst_rb = st.checkbox('RB + DST')
+        opp_stack_expand = st.expander(":grey[Stacks - Opposing]")
+        with opp_stack_expand:
+            qb_rb_opp = st.checkbox('QB + Opp RB')
+            qb_wr_opp = st.checkbox('QB + Opp WR')
+            qb_te_opp = st.checkbox('QB + Opp TE')
+        options = ["RB", "WR", "TE"]
+        flex_input = st.pills(":grey[Specify FLEX Position]", options, selection_mode="single")
+        col_t1, col_t2, col_t3 = st.columns([1,3,2])
+        with col_t1: 
+            dst_excl = st.toggle("Exclude Opposing DST", label_visibility="collapsed")
+            rb_max = st.toggle("Maximum 1 RB on Team", label_visibility="collapsed")
+        with col_t2:
+            st.caption(':grey[Exclude Opposing DST]')
+            st.caption(':grey[Maximum 1 RB on Team]')
+        col_t3.empty()
+        input_controls = {
+            'qb_stacks_team': {
+                'QB_RB': qb_rb, 
+                'QB_WR': qb_wr, 
+                'QB_TE': qb_te, 
+                'QB_WR_TE': qb_wr_te, 
+                'QB_RB_WR_TE': qb_flex
+            },
+            'qb_stacks_opp': {
+                'QB_RB_OPP': qb_rb_opp, 
+                'QB_WR_OPP': qb_wr_opp, 
+                'QB_TE_OPP': qb_te_opp
+            },
+            'RB_DST': dst_rb,
+            'dst_exclude_opp': dst_excl,
+            'rb_max': rb_max,
+            'flex_req': flex_input
+        }
+    return(input_controls)
 
-def display_games():
+def sort_games():
     games = {}
     for team in teams:
         if teams[team] not in games:
             games.update({team: teams[team]})
     return games
 
+def display_game_buttons(games):
+    half = math.ceil(len(games)/2)
+    cols = st.columns(half)   
+    for i, (t,o) in enumerate(games.items()):
+        if i >= half:
+            with cols[i-half]:
+                st.button(f":black_small_square: {t}\n:black_small_square: {o}", disabled=False, type="secondary", use_container_width=True)
+        else:
+            cols[i].button(f":black_small_square: {t}\n:black_small_square: {o}", disabled=False, type="secondary", use_container_width=True)
+
 def display_players_queue(players_df):
     with st.container():
-        col_7, col_8 = st.columns(2)
-        with col_7:
-            st.markdown("##### Players")
-        col_8.empty()
         edited_df = st.data_editor(
             players_df,
             height=420,
@@ -177,14 +202,9 @@ def display_players_queue(players_df):
 
 def display_lineup(lineup_df):
     with st.container():
-        col_9, col_10 = st.columns(2)
-        with col_9:
-            st.markdown("##### Lineup")
-        totals_placeholder = col_10.empty()
-        totals_placeholder.write("**Proj** 0.00 | **Rem Salary** $50000")
         lineup_placeholder = st.empty() 
-        lineup_placeholder.dataframe(lineup_df, column_config={'NAME': st.column_config.Column(width='medium'), 'TEAM': st.column_config.Column(width='small')}, height=352, hide_index=True, use_container_width=True)
-    return totals_placeholder, lineup_placeholder
+        lineup_placeholder.dataframe(lineup_df, column_config={'NAME': st.column_config.Column(width=130), 'TEAM': st.column_config.Column(width=70)}, height=352, hide_index=True, use_container_width=True)
+    return lineup_placeholder
 
 def lock_player_errors(edited_df):
     errors = []
@@ -284,14 +304,14 @@ def display_results(results, lineup_df):
         row = final_lineup[(final_lineup["POS"] == results[player]['position']) & (final_lineup["NAME"] == "")].index
         if len(row) > 0:
             final_lineup.at[row[0], "NAME"] = results[player]['name'] 
-            final_lineup.at[row[0], "TEAM"] = f"{results[player]['team']} - {results[player]['opp']}"
+            final_lineup.at[row[0], "TEAM"] = f"{results[player]['team']} ({results[player]['opp']})"
             final_lineup.at[row[0], "PROJ"] = results[player]['projection'] 
             final_lineup.at[row[0], "SAL"] = results[player]['salary']
         else:
             flex_row = final_lineup[(final_lineup["POS"] == "FLEX") & (final_lineup["NAME"] == "")].index
             if len(flex_row) > 0 and results[player]['position'] in ['RB', 'WR', 'TE']:
                 final_lineup.at[flex_row[0], "NAME"] = results[player]['name']
-                final_lineup.at[flex_row[0], "TEAM"] = f"{results[player]['team']} - {results[player]['opp']}"
+                final_lineup.at[flex_row[0], "TEAM"] = f"{results[player]['team']} ({results[player]['opp']})"
                 final_lineup.at[flex_row[0], "PROJ"] = results[player]['projection']
                 final_lineup.at[flex_row[0], "SAL"] = results[player]['salary']
     return final_lineup
