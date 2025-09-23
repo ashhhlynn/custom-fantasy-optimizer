@@ -153,15 +153,17 @@ def display_game_buttons():
     for team in teams:
         if teams[team] not in games:
             games.update({team: teams[team]})
+    if 'selected_game' not in st.session_state:
+        st.session_state.selected_game = 'All Games'    
     half = math.ceil(len(games)/2)
     cols = st.columns(half)   
     for i, (t,o) in enumerate(games.items()):
-        if i >= half:
-            with cols[i-half].container(border=True):
-                st.caption(f"**● {t}  \n● {o}**")
+        if st.session_state.selected_game == [t, o]:            
+            if cols[i % half].button(f"**:primary[● {t}  \n● {o}]**", use_container_width=True):
+                    st.session_state.selected_game = 'All Games'
         else:
-            with cols[i].container(border=True):
-                st.caption(f"**● {t}  \n● {o}**")
+            if cols[i % half].button(f"**:primary[● {t}  \n● {o}]**", use_container_width=True):
+                st.session_state.selected_game = [t, o]
 
 def display_players_queue(players_df, position_filter):
     if 'players_df' not in st.session_state:
@@ -175,6 +177,10 @@ def display_players_queue(players_df, position_filter):
         filtered_df = st.session_state.players_df.copy()
     else:
         filtered_df = st.session_state.players_df[st.session_state.players_df['position'] == position_filter].copy()
+    if st.session_state.selected_game == 'All Games':
+        filtered_df = st.session_state.players_df.copy()
+    else:
+        filtered_df = st.session_state.players_df[st.session_state.players_df['team'].isin(st.session_state.selected_game)].copy()
     with st.container():
         st.session_state.edited_df = st.data_editor(
             filtered_df,

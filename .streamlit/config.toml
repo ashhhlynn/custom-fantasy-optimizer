@@ -3,5 +3,5 @@ base="light"
 primaryColor="#8383b5"
 borderColor="#8383b5"
 showWidgetBorder=true
-borderRadius="small"
+buttonRadius="full"
 secondaryBackgroundColor="#F0F1F6"
