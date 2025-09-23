@@ -2,6 +2,6 @@
 base="light"
 primaryColor="#8383b5"
 borderColor="#8383b5"
-dataframeBorderColor = "#DCDCE6
+dataframeBorderColor = "#DCDCE6"
 showWidgetBorder=true
 secondaryBackgroundColor="#F0F1F6"
