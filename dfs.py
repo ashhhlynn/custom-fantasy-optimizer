@@ -48,7 +48,16 @@ def fetch_dk_players(sleeper_players):
         if item['draftStatAttributes'][0].get('id') == 90 and (index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']):
             parts = item['competition']['name'].split('@')
             opponent = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
-            info = {str(index):{'name': item['displayName'], 'position': item['position'], 'team': item['teamAbbreviation'], 'opp': opponent, 'FFPG': item['draftStatAttributes'][0]['value'], 'OPRK': item['draftStatAttributes'][1]['value'], 'salary': item['salary'], 'projection':0}}
+            info = {str(index): {
+                'name': item['displayName'],
+                'position': item['position'], 
+                'team': item['teamAbbreviation'], 
+                'opp': opponent, 
+                'FFPG': item['draftStatAttributes'][0]['value'], 
+                'OPRK': item['draftStatAttributes'][1]['value'], 
+                'salary': item['salary'], 
+                'projection':0
+            }}
             if item['displayName'] in sleeper_players:
                 info[str(index)]['projection'] = sleeper_players[item['displayName']]
             elif len(item['displayName'].split(' ', 2)) > 2:
@@ -56,8 +65,8 @@ def fetch_dk_players(sleeper_players):
                 if short in sleeper_players:
                     info[str(index)]['projection'] = sleeper_players[short]
             dk_players.update(info)
-            if item['position'] == 'DST' and item['teamAbbreviation'] not in teams:
-                teams.update({item['teamAbbreviation']: opponent}) 
+        if item['position'] == 'DST' and item['teamAbbreviation'] not in teams:
+            teams.update({item['teamAbbreviation']: opponent}) 
     return dk_players
 
 def load_streamlit(dk_players, players_df, lineup_df):
@@ -75,18 +84,16 @@ def load_streamlit(dk_players, players_df, lineup_df):
             st.text_input('', 'Search', disabled=True, label_visibility='collapsed')
         col_a2.empty()
         with col_a3:
-            st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST", "FLEX"), disabled=True, label_visibility='collapsed')
+            position_filter = st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')
     col_b.empty()
     with col_c:
         input_controls = display_input_controls()
     col_d, col_e, col_f = st.columns([24,2,12])
     with col_d:
-        edited_df = display_players_queue(players_df)
+        edited_df = display_players_queue(players_df, position_filter)
     col_e.empty()
     with col_f: 
-        errors = lock_player_errors(edited_df)
-        for e in errors: 
-            st.error(e)          
+        lock_player_errors(edited_df)
         lineup_placeholder = display_lineup(lineup_df)
         col_g, col_h, col_i, col_j = st.columns([5,2,4,3])
         col_h.empty()
@@ -98,7 +105,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
                 final_lineup = display_results(results, lineup_df)
                 if status != 'Optimal':
                     st.warning('Error: Optimal solution not found.')
-                lineup_placeholder.dataframe(final_lineup, height=352, column_config={'NAME': st.column_config.Column(width=130)}, hide_index=True, use_container_width=True)
+                lineup_placeholder.dataframe(final_lineup, height=352, column_config={'NAME': st.column_config.Column(width=134)}, hide_index=True, use_container_width=True)
                 with col_j:
                     st.write(round(total_proj, 2), "  \n", rem_sal)
             else:
@@ -130,20 +137,10 @@ def display_input_controls():
         options = ["RB", "WR", "TE"]
         flex_input = st.pills("Specify FLEX Position", options, selection_mode="single")
         dst_excl = st.toggle("Exclude Opposing DST")
-        rb_max = st.toggle("Maximum 1 RB/Team")
+        rb_max = st.toggle("Maximum 1 RB / Team")
         input_controls = {
-            'qb_stacks_team': {
-                'QB_RB': qb_rb, 
-                'QB_WR': qb_wr, 
-                'QB_TE': qb_te, 
-                'QB_WR_TE': qb_wr_te, 
-                'QB_RB_WR_TE': qb_flex
-            },
-            'qb_stacks_opp': {
-                'QB_RB_OPP': qb_rb_opp, 
-                'QB_WR_OPP': qb_wr_opp, 
-                'QB_TE_OPP': qb_te_opp
-            },
+            'qb_stacks_team': {'QB_RB': qb_rb, 'QB_WR': qb_wr, 'QB_TE': qb_te, 'QB_WR_TE': qb_wr_te, 'QB_RB_WR_TE': qb_flex},
+            'qb_stacks_opp': {'QB_RB_OPP': qb_rb_opp, 'QB_WR_OPP': qb_wr_opp, 'QB_TE_OPP': qb_te_opp},
             'RB_DST': dst_rb,
             'dst_exclude_opp': dst_excl,
             'rb_max': rb_max,
@@ -161,15 +158,26 @@ def display_game_buttons():
     for i, (t,o) in enumerate(games.items()):
         if i >= half:
             with cols[i-half].container(border=True):
-                st.caption(f":grey[● {t}  \n● {o}]")
+                st.caption(f"**● {t}  \n● {o}**")
         else:
             with cols[i].container(border=True):
-                st.caption(f":grey[● {t}  \n● {o}]")
+                st.caption(f"**● {t}  \n● {o}**")
 
-def display_players_queue(players_df):
+def display_players_queue(players_df, position_filter):
+    if 'players_df' not in st.session_state:
+        st.session_state.players_df = players_df
+    def sync_edits():
+        edited_data = st.session_state.data_editor_key['edited_rows']
+        for index, updates in edited_data.items():
+            original_index = st.session_state.edited_df.iloc[index].name
+            st.session_state.players_df.loc[original_index, updates.keys()] = updates.values()   
+    if position_filter == 'All':
+        filtered_df = st.session_state.players_df.copy()
+    else:
+        filtered_df = st.session_state.players_df[st.session_state.players_df['position'] == position_filter].copy()
     with st.container():
-        edited_df = st.data_editor(
-            players_df,
+        st.session_state.edited_df = st.data_editor(
+            filtered_df,
             height=420,
             hide_index=True,
             column_config={
@@ -184,15 +192,16 @@ def display_players_queue(players_df):
                 "lock": st.column_config.CheckboxColumn("🔐"),
                 "exclude": st.column_config.CheckboxColumn("🚫")
             },
-            key="player_pool", 
+            key="data_editor_key", 
+            on_change=sync_edits,
             use_container_width=True
         )
-    return edited_df
+    return st.session_state.edited_df
 
 def display_lineup(lineup_df):
     with st.container():
         lineup_placeholder = st.empty() 
-        lineup_placeholder.dataframe(lineup_df, column_config={'NAME': st.column_config.Column(width=130)}, height=352, hide_index=True, use_container_width=True)
+        lineup_placeholder.dataframe(lineup_df, column_config={'NAME': st.column_config.Column(width=134)}, height=352, hide_index=True, use_container_width=True)
     return lineup_placeholder
 
 def lock_player_errors(edited_df):
@@ -207,7 +216,8 @@ def lock_player_errors(edited_df):
         pos_count = (edited_df[edited_df["lock"]]["position"] == pos).sum()
         if pos_count > caps['max']:
             errors.append(f"❌ You can’t lock more than {caps['max']} {pos}(s).")
-    return errors
+    for e in errors: 
+        st.error(e)  
 
 def customize_constraints(input_controls, edited_df):    
     team_constraints = {
@@ -219,9 +229,9 @@ def customize_constraints(input_controls, edited_df):
     }
     player_pos_constraints = {
         'include': edited_df[edited_df['lock']].index.tolist(), 
-        'exclude': edited_df[edited_df['exclude']].index.tolist()
+        'exclude': edited_df[edited_df['exclude']].index.tolist(),
+        'flex_req': input_controls['flex_req']
     }
-    player_pos_constraints.update({'flex_req': input_controls['flex_req']})
     for key, value in input_controls['qb_stacks_team'].items():
         if key == 'QB_WR_TE' and value:
             team_constraints['qb_stacks'].append('WR_TE') 
