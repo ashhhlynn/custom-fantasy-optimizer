@@ -64,7 +64,7 @@ def fetch_dk_players(sleeper_players):
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')    
     st.markdown('#### Custom Fantasy Optimizer')
-    col_a, col_b, col_c = st.columns([22,2,12])
+    col_a, col_b, col_c = st.columns([24,2,12])
     with col_a:
         st.markdown('')
         st.markdown('')
@@ -81,7 +81,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
     col_b.empty()
     with col_c:
         input_controls = display_input_controls()
-    col_d, col_e, col_f = st.columns([22,2,12])
+    col_d, col_e, col_f = st.columns([24,2,12])
     with col_d:
         edited_df, queue_controls = display_players_queue(players_df)
     col_e.empty()
@@ -107,8 +107,12 @@ def load_streamlit(dk_players, players_df, lineup_df):
 def display_input_controls():
     custom_container = st.container(border=True)
     with custom_container:
-        st.caption('⚙️ **Custom**')
-        team_stack_expand = custom_container.expander("**Stacks** - Team")
+        col_a, col_b = st.columns([10,1])
+        with col_a:
+            st.write("**Custom**")
+        with col_b:
+            st.write('⚙️')
+        team_stack_expand = custom_container.expander("Stacks - Team")
         with team_stack_expand:
             col_s1, col_s2 = st.columns([3,4])
             with col_s1:
@@ -119,18 +123,15 @@ def display_input_controls():
                 qb_flex = st.checkbox('QB + FLEX')
                 qb_wr_te = st.checkbox('QB + WR or TE')
                 dst_rb = st.checkbox('RB + DST')
-        opp_stack_expand = st.expander("**Stacks** - Opposing")
+        opp_stack_expand = st.expander("Stacks - Opposing")
         with opp_stack_expand:
             qb_rb_opp = st.checkbox('QB + Opp RB')
             qb_wr_opp = st.checkbox('QB + Opp WR')
             qb_te_opp = st.checkbox('QB + Opp TE')
         options = ["RB", "WR", "TE"]
-        col_pt1, col_pt2 = st.columns([9,10])
-        with col_pt1:
-            flex_input = st.pills("Specify FLEX Position", options, selection_mode="single",)
-        with col_pt2:
-            dst_excl = st.toggle("Exclude Opp. DST")
-            rb_max = st.toggle("Max. 1 RB / Team")
+        flex_input = st.pills("Specify FLEX Position", options, selection_mode="single",)
+        dst_excl = st.toggle("Exclude Opposing DST")
+        rb_max = st.toggle("Maximum 1 RB/Team")
         input_controls = {
             'qb_stacks_team': {
                 'QB_RB': qb_rb, 
@@ -163,10 +164,12 @@ def display_game_buttons(games):
     cols = st.columns(half)   
     for i, (t,o) in enumerate(games.items()):
         if i >= half:
-            with cols[i-half]:
-                st.button(f"• {t}  \n• {o}", disabled=False, use_container_width=True)
+            with cols[i-half].container(border=True):
+                st.write(f"▪️:grey[{t}  \n▪️{o}]")
         else:
-            cols[i].button(f"• {t}  \n• {o}", disabled=False, use_container_width=True)
+            with cols[i].container(border=True):
+                st.write(f"▪️:grey[{t}  \n▪️{o}]")
+
 
 def display_players_queue(players_df):
     with st.container():
