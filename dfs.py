@@ -78,6 +78,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
         st.markdown('')
         display_game_buttons()
         st.markdown('')
+        st.markdown('')
         st.markdown("##### Players")
         col_a1, col_a2, col_a3 = st.columns([3,1,2])
         with col_a1:
@@ -159,10 +160,10 @@ def display_game_buttons():
     cols = st.columns(half)   
     for i, (t,o) in enumerate(games.items()):
         if st.session_state.selected_game == [t, o]:            
-            if cols[i % half].button(f"**:primary[● {t}  \n● {o}]**", use_container_width=True):
+            if cols[i % half].button(f"**:primary[●] :grey[{t}]  \n:primary[●] :grey[{o}]**", use_container_width=True):
                     st.session_state.selected_game = 'All Games'
         else:
-            if cols[i % half].button(f"**:primary[● {t}  \n● {o}]**", use_container_width=True):
+            if cols[i % half].button(f"**:primary[●] :grey[{t}]  \n:primary[●] :grey[{o}]**", use_container_width=True):
                 st.session_state.selected_game = [t, o]
 
 def display_players_queue(players_df, position_filter):
