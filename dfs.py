@@ -160,10 +160,10 @@ def display_game_buttons():
     cols = st.columns(half)   
     for i, (t,o) in enumerate(games.items()):
         if st.session_state.selected_game == [t, o]:            
-            if cols[i % half].button(f"**:primary[●] :grey[{t}]  \n:primary[●] :grey[{o}]**", use_container_width=True):
+            if cols[i % half].button(f":primary[●] {t}  \n:primary[●] {o}", use_container_width=True):
                     st.session_state.selected_game = 'All Games'
         else:
-            if cols[i % half].button(f"**:primary[●] :grey[{t}]  \n:primary[●] :grey[{o}]**", use_container_width=True):
+            if cols[i % half].button(f":primary[●] {t}  \n:primary[●] {o}", use_container_width=True):
                 st.session_state.selected_game = [t, o]
 
 def display_players_queue(players_df, position_filter):
