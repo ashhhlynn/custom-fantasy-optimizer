@@ -134,7 +134,7 @@ def display_input_controls():
             qb_wr_opp = st.checkbox('QB + Opposing WR')
             qb_te_opp = st.checkbox('QB + Opposing TE')
         options = ["RB", "WR", "TE"]
-        flex_input = st.pills("Specify FLEX Position", options, selection_mode="single")
+        flex_input = st.segmented_control("Specify FLEX Position", options, selection_mode="single")
         dst_excl = st.toggle("Exclude Opposing DST")
         rb_max = st.toggle("Maximum 1 RB / Team")
         input_controls = {
@@ -153,12 +153,20 @@ def display_game_buttons():
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
+        if len(t) == 3:
+            t_ab = t
+        else:
+            t_ab = t + '&nbsp;&nbsp;'
+        if len(o) == 3:
+            o_ab = o
+        else:
+            o_ab = o + '&nbsp;&nbsp;'
         if st.session_state.selected_game == [t, o]:            
-            if cols[i % half].button(f"**:primary[●] {t}  \n:primary[●] {o}**", use_container_width=True):
+            if cols[i % half].button(f"**:primary[●] {t_ab}  \n:primary[●] {o_ab}**", use_container_width=True):
                 st.session_state.selected_game = 'All Games'
         else:
-            if cols[i % half].button(f"**:primary[●] {t}  \n:primary[●] {o}**", use_container_width=True):
-                st.session_state.selected_game = [t, o]
+            if cols[i % half].button(f"**:primary[●] {t_ab}  \n:primary[●] {o_ab}**", use_container_width=True):
+                st.session_state.selected_game = [t, o]            
 
 def display_players_queue(players_df, position_filter):
     if 'players_df' not in st.session_state:
