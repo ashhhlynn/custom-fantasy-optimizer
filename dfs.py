@@ -30,7 +30,7 @@ def run_app():
     load_streamlit(dk_players, players_df, lineup_df)
 
 def fetch_sleeper_projections():
-    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/4?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
+    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/6?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
     json_sleeper_data = json.loads(sleeper_API.text)    
     sleeper_players = {}
     for item in json_sleeper_data:
@@ -42,7 +42,7 @@ def fetch_sleeper_projections():
     return sleeper_players
 
 def fetch_dk_players(sleeper_players): 
-    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/134308/draftables')
+    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/135005/draftables')
     json_dk_data = json.loads(dk_API.text)
     dk_players = {}
     for index, item in enumerate(json_dk_data['draftables']):
@@ -73,29 +73,26 @@ def fetch_dk_players(sleeper_players):
     return dk_players
 
 def load_streamlit(dk_players, players_df, lineup_df):
-    st.set_page_config(layout='wide')    
-    st.markdown('#### Custom Fantasy Optimizer')
+    st.set_page_config(layout='wide')        
+    col_1, col_2, col_3 = st.columns([1,5,1])
+    col_1.empty()
+    with col_2:
+        display_game_buttons()
+        st.markdown(' ')
+    col_3.empty()
     col_a, col_b, col_c = st.columns([24,2,12])
     with col_a:
-        st.markdown('')
-        st.markdown('')
-        st.markdown('')
-        display_game_buttons()
-        st.markdown('')
         st.markdown("##### Players")
         col_a1, col_a2, col_a3 = st.columns([3,1,2])
         col_a1.text_input('', 'Search', disabled=True, label_visibility='collapsed')
         col_a2.empty()
         with col_a3:
             position_filter = st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')
+        st.markdown(' ')
+        edited_df = display_players_queue(players_df, position_filter)
     col_b.empty()
     with col_c:
         input_controls = display_input_controls()
-    col_d, col_e, col_f = st.columns([24,2,12])
-    with col_d:
-        edited_df = display_players_queue(players_df, position_filter)
-    col_e.empty()
-    with col_f: 
         lock_player_errors()
         lineup_placeholder = display_lineup(lineup_df)
         col_g, col_h, col_i, col_j = st.columns([5,2,4,3])
@@ -117,7 +114,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
 def display_input_controls():
     with st.container(border=True):
         col_c1, col_c2 = st.columns([10,1])
-        col_c1.write("**Custom**")
+        col_c1.write("**Customize**")
         col_c2.write('⚙️')
         with st.expander("Stacks - Team"):
             col_s1, col_s2 = st.columns([3,4])
@@ -133,8 +130,14 @@ def display_input_controls():
             qb_rb_opp = st.checkbox('QB + Opposing RB')
             qb_wr_opp = st.checkbox('QB + Opposing WR')
             qb_te_opp = st.checkbox('QB + Opposing TE')
+        col_f1, col_f2, col_f3 = st.columns([22,13,1])
         options = ["RB", "WR", "TE"]
-        flex_input = st.segmented_control("Specify FLEX Position", options, selection_mode="single")
+        with col_f1:
+            flex_input = st.segmented_control("FLEX Position and Team (1+)", options, selection_mode="single")
+        with col_f2:
+            st.caption(' ')
+            flex_team_input = st.selectbox("Flex Team", (teams.keys()),  disabled=False, placeholder="Team", label_visibility='collapsed', index=None)        
+        col_f3.empty()
         dst_excl = st.toggle("Exclude Opposing DST")
         rb_max = st.toggle("Maximum 1 RB / Team")
         input_controls = {
@@ -143,7 +146,8 @@ def display_input_controls():
             'RB_DST': dst_rb,
             'dst_exclude_opp': dst_excl,
             'rb_max': rb_max,
-            'flex_req': flex_input
+            'flex_req': flex_input,
+            'flex_team': flex_team_input
         }
     return(input_controls)
 
@@ -186,7 +190,7 @@ def display_players_queue(players_df, position_filter):
     with st.container():
         st.session_state.edited_df = st.data_editor(
         filtered_df,
-        height=420,
+        height=660,
         hide_index=True,
         column_config={
             "name": st.column_config.Column("NAME", disabled=True),
@@ -233,8 +237,9 @@ def customize_constraints(input_controls, edited_df):
         'qb_stacks_opposing': [],
         'RB_DST': input_controls['RB_DST'],
         'dst_exclude_opp': input_controls['dst_exclude_opp'],
-        'rb_max': input_controls['rb_max']
-    }
+        'rb_max': input_controls['rb_max'],
+        'flex_team': input_controls['flex_team']
+    }    
     player_pos_constraints = {
         'include': edited_df[edited_df['lock']].index.tolist(), 
         'exclude': edited_df[edited_df['exclude']].index.tolist(),
@@ -283,7 +288,9 @@ def optimize_dk_players(dk_players, team_constraints, player_pos_constraints):
     return results, rem_sal, total_proj, status
 
 def optimizer_team_constraints(dk_players, player_vars, prob, team_constraints):
-    for team in teams: 
+    if team_constraints['flex_team']: 
+        prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['team'] == team_constraints['flex_team'] and dk_players[p]['position'] in ["RB", "WR", "TE"]) >= 1  
+    for team in teams:         
         qb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "QB"])
         for pos in team_constraints['qb_stacks']:
             if pos == 'WR_TE':
