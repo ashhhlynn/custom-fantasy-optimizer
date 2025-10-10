@@ -74,28 +74,27 @@ def fetch_dk_players(sleeper_players):
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')        
-    col_1, col_2, col_3 = st.columns([1,5,1])
+    col_1, col_2, col_3 = st.columns([1,6,1])
     col_1.empty()
     with col_2:
         display_game_buttons()
         st.markdown(' ')
+        st.markdown(' ')
     col_3.empty()
     col_a, col_b, col_c = st.columns([24,2,12])
     with col_a:
-        st.markdown("##### Players")
         col_a1, col_a2, col_a3 = st.columns([3,1,2])
         col_a1.text_input('', 'Search', disabled=True, label_visibility='collapsed')
         col_a2.empty()
         with col_a3:
             position_filter = st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')
-        st.markdown(' ')
         edited_df = display_players_queue(players_df, position_filter)
     col_b.empty()
     with col_c:
         input_controls = display_input_controls()
         lock_player_errors()
         lineup_placeholder = display_lineup(lineup_df)
-        col_g, col_h, col_i, col_j = st.columns([5,2,4,3])
+        col_g, col_h, col_i, col_j = st.columns([6,3,5,3])
         col_h.empty()
         col_i.write(f"**Projection**  \n**Rem. Salary**")
         if col_g.button('Optimize', use_container_width=True, type="primary"):
@@ -106,7 +105,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
                 st.warning('Error: Optimal solution not found.')
             lineup_placeholder.dataframe(final_lineup, height=352, column_config={'NAME': st.column_config.Column(width=134)}, hide_index=True, use_container_width=True)
             with col_j:
-                st.write(round(total_proj, 2), "  \n", rem_sal)
+                st.write(round(total_proj, 1), "  \n", rem_sal)
         else:
             with col_j:
                 st.write(0.00, "  \n", 50000)
@@ -116,7 +115,7 @@ def display_input_controls():
         col_c1, col_c2 = st.columns([10,1])
         col_c1.write("**Customize**")
         col_c2.write('⚙️')
-        with st.expander("Stacks - Team"):
+        with st.expander("Team Stacks"):
             col_s1, col_s2 = st.columns([3,4])
             with col_s1:
                 qb_rb = st.checkbox('QB + RB')
@@ -126,17 +125,16 @@ def display_input_controls():
                 qb_flex = st.checkbox('QB + FLEX')
                 qb_wr_te = st.checkbox('QB + WR or TE')
                 dst_rb = st.checkbox('RB + DST')
-        with st.expander("Stacks - Opposing"):
-            qb_rb_opp = st.checkbox('QB + Opposing RB')
-            qb_wr_opp = st.checkbox('QB + Opposing WR')
-            qb_te_opp = st.checkbox('QB + Opposing TE')
-        col_f1, col_f2, col_f3 = st.columns([22,13,1])
+        with st.expander("Opponent Stacks"):
+            qb_rb_opp = st.checkbox('QB + Opp. RB')
+            qb_wr_opp = st.checkbox('QB + Opp. WR')
+            qb_te_opp = st.checkbox('QB + Opp. TE')
+        col_f1, col_f2, col_f3 = st.columns([29,16,1])
         options = ["RB", "WR", "TE"]
         with col_f1:
-            flex_input = st.segmented_control("FLEX Position and Team (1+)", options, selection_mode="single")
+            flex_input = st.segmented_control("FLEX Position and Team (Min 1)", options, selection_mode="single")
         with col_f2:
-            st.caption(' ')
-            flex_team_input = st.selectbox("Flex Team", (teams.keys()),  disabled=False, placeholder="Team", label_visibility='collapsed', index=None)        
+            flex_team_input = st.selectbox("Flex Team", (teams.keys()), placeholder="Team", label_visibility='hidden', index=None)        
         col_f3.empty()
         dst_excl = st.toggle("Exclude Opposing DST")
         rb_max = st.toggle("Maximum 1 RB / Team")
