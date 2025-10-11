@@ -3,6 +3,7 @@ import json
 from pulp import *
 import pandas as pd 
 import streamlit as st 
+from streamlit_searchbox import st_searchbox
 
 position_bounds = {
     'QB': {'min': 1, 'max': 1},
@@ -84,11 +85,17 @@ def load_streamlit(dk_players, players_df, lineup_df):
     col_a, col_b, col_c = st.columns([24,2,12])
     with col_a:
         col_a1, col_a2, col_a3 = st.columns([3,1,2])
-        col_a1.text_input('', 'Search', disabled=True, label_visibility='collapsed')
+        with col_a1:
+            def search_data(searchterm: str) -> list:
+                if not searchterm:
+                    return []
+                results = players_df[players_df['name'].str.contains(searchterm, case=False)]
+                return(results['name'].tolist())            
+            selected_value = st_searchbox(search_data, placeholder="Search", key="search_key")
         col_a2.empty()
         with col_a3:
-            position_filter = st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')
-        edited_df = display_players_queue(players_df, position_filter)
+            position_filter = st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')    
+        edited_df = display_players_queue(players_df, position_filter, selected_value)
     col_b.empty()
     with col_c:
         input_controls = display_input_controls()
@@ -116,20 +123,20 @@ def display_input_controls():
         col_c1.write("**Customize**")
         col_c2.write('⚙️')
         with st.expander("Team Stacks"):
-            col_s1, col_s2 = st.columns([3,4])
+            col_s1, col_s2 = st.columns(2)
             with col_s1:
                 qb_rb = st.checkbox('QB + RB')
                 qb_wr = st.checkbox('QB + WR')
                 qb_te = st.checkbox('QB + TE')
             with col_s2:     
+                qb_wr_te = st.checkbox('QB + WR/TE')
                 qb_flex = st.checkbox('QB + FLEX')
-                qb_wr_te = st.checkbox('QB + WR or TE')
                 dst_rb = st.checkbox('RB + DST')
         with st.expander("Opponent Stacks"):
             qb_rb_opp = st.checkbox('QB + Opp. RB')
             qb_wr_opp = st.checkbox('QB + Opp. WR')
             qb_te_opp = st.checkbox('QB + Opp. TE')
-        col_f1, col_f2, col_f3 = st.columns([29,16,1])
+        col_f1, col_f2, col_f3 = st.columns([30,16,1])
         options = ["RB", "WR", "TE"]
         with col_f1:
             flex_input = st.segmented_control("FLEX Position and Team (Min 1)", options, selection_mode="single")
@@ -170,7 +177,7 @@ def display_game_buttons():
             if cols[i % half].button(f"**:primary[●] {t_ab}  \n:primary[●] {o_ab}**", use_container_width=True):
                 st.session_state.selected_game = [t, o]            
 
-def display_players_queue(players_df, position_filter):
+def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
         st.session_state.players_df = players_df
     def sync_edits():
@@ -185,10 +192,12 @@ def display_players_queue(players_df, position_filter):
             filtered_df = st.session_state.players_df[st.session_state.players_df['team'].isin(st.session_state.selected_game)].copy()
     else:
         filtered_df = st.session_state.players_df.copy()
+    if selected_value:
+        filtered_df = st.session_state.players_df[st.session_state.players_df['name'] == selected_value].copy() 
     with st.container():
         st.session_state.edited_df = st.data_editor(
         filtered_df,
-        height=660,
+        height=632,
         hide_index=True,
         column_config={
             "name": st.column_config.Column("NAME", disabled=True),
