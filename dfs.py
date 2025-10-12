@@ -219,7 +219,7 @@ def display_game_button_logos():
     for i, (t, o) in enumerate(games.items()):
         with cols[i % half+1]:
             with st.container(border=True, gap=None, horizontal_alignment="center"):
-                col_cb1, col_cb2 = st.columns(2, vertical_alignment="bottom")
+                col_cb1, col_cb2 = st.columns(2, vertical_alignment="top")
                 with col_cb1:
                     st.image(logos[t], width=20)
                     st.image(logos[o], width=20)
