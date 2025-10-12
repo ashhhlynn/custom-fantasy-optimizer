@@ -109,14 +109,13 @@ def fetch_dk_players(sleeper_players):
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')           
-    '''Temp Hidden:  
-    col_1, col_2, col_3 = st.columns([1,6,1])
-    col_1.empty() 
-    with col_2:            
-        display_game_buttons()
-    col_3.empty()
-    '''
-    ''' Temp Hidden: '''
+    # Temp Hidden:  
+    # col_1, col_2, col_3 = st.columns([1,6,1])
+    # col_1.empty() 
+    # with col_2:            
+    #    display_game_buttons()
+    # col_3.empty()
+    # Temp Hidden:
     display_game_button_logos()
     st.markdown(' ')
     st.markdown(' ')
@@ -222,10 +221,10 @@ def display_game_button_logos():
     for i, (t, o) in enumerate(games.items()):
         with cols[i % half+1]:
             with st.container(border=True, gap=None):
-                col_cb1, col_cb2 = st.columns([1,2], vertical_alignment='center')
+                col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
                 with col_cb1:
-                    st.image(logos[t], width=18)
-                    st.image(logos[o], width=18)
+                    st.image(logos[t], width=20)
+                    st.image(logos[o], width=20)
                 if col_cb2.button(f'**:primary[{t}  \n{o}]**', type="tertiary"):
                     if st.session_state.selected_game == [t, o]:            
                         st.session_state.selected_game = 'All Games'
