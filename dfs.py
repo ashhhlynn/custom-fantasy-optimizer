@@ -171,7 +171,7 @@ def display_input_controls():
             qb_rb_opp = st.checkbox('QB + Opp. RB')
             qb_wr_opp = st.checkbox('QB + Opp. WR')
             qb_te_opp = st.checkbox('QB + Opp. TE')
-        col_f1, col_f2 = st.columns([31,18], vertical_alignment='bottom')
+        col_f1, col_f2 = st.columns([32,20], vertical_alignment='bottom')
         options = ["RB", "WR", "TE"]
         with col_f1:
             flex_input = st.segmented_control("FLEX Position and Team (Min 1)", options, selection_mode="single")
@@ -215,10 +215,10 @@ def display_game_button_logos():
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
     half = math.ceil(len(games)/2)
-    cols = st.columns(half+2) 
+    cols = st.columns(half+2, vertical_alignment="bottom") 
     for i, (t, o) in enumerate(games.items()):
         with cols[i % half+1]:
-            with st.container(border=True, gap=None):
+            with st.container(border=True, gap=None, horizontal_alignment="center"):
                 col_cb1, col_cb2 = st.columns(2)
                 with col_cb1:
                     st.image(logos[t], width=20)
