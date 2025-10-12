@@ -108,13 +108,15 @@ def fetch_dk_players(sleeper_players):
     return dk_players
 
 def load_streamlit(dk_players, players_df, lineup_df):
-    st.set_page_config(layout='wide')       
+    st.set_page_config(layout='wide')           
+    '''Temp Hidden:  
     col_1, col_2, col_3 = st.columns([1,6,1])
-    col_1.empty()
-    # Temp Hidden: with col_2:            
-    # Temp Hidden: display_game_buttons()
+    col_1.empty() 
+    with col_2:            
+        display_game_buttons()
     col_3.empty()
-    # Temp Hidden:
+    '''
+    ''' Temp Hidden: '''
     display_game_button_logos()
     st.markdown(' ')
     st.markdown(' ')
@@ -137,7 +139,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
         input_controls = display_input_controls()
         lock_player_errors()
         lineup_placeholder = display_lineup(lineup_df)
-        col_g, col_h, col_i, col_j = st.columns([6,3,5,3], vertical_alignment='bottom')
+        col_g, col_h, col_i, col_j = st.columns([6,3,5,3], vertical_alignment='center')
         col_h.empty()
         col_i.write(f"**Projection**  \n**Rem. Salary**")
         if col_g.button('Optimize', use_container_width=True, type="primary"):
@@ -154,7 +156,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
                 st.write(0.00, "  \n", 50000)
 
 def display_input_controls():
-    with st.container(border=True, gap=None):
+    with st.container(border=True):
         col_c1, col_c2 = st.columns([10,1])
         col_c1.write("**Customize**")
         col_c2.write('⚙️')
@@ -213,20 +215,22 @@ def display_game_buttons():
                 st.session_state.selected_game = [t, o]            
 
 def display_game_button_logos():
-    if 'selected_game' not in st.session_state:
-        st.session_state.selected_game = 'All Games'  
     half = math.ceil(len(games)/2)
     cols = st.columns(half+2) 
+    if 'selected_game' not in st.session_state:
+        st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
         with cols[i % half+1]:
             with st.container(border=True, gap=None):
-                col_cb1, col_cb2 = st.columns(2, vertical_alignment="center")
+                col_cb1, col_cb2 = st.columns([1,2], vertical_alignment='center')
                 with col_cb1:
-                    st.image(logos[t], width=20)
-                    st.image(logos[o], width=20)
-                with col_cb2:
-                    st.markdown(f'**:primary[{t}]**')
-                    st.markdown(f'**:primary[{o}]**')
+                    st.image(logos[t], width=18)
+                    st.image(logos[o], width=18)
+                if col_cb2.button(f'**:primary[{t}  \n{o}]**', type="tertiary"):
+                    if st.session_state.selected_game == [t, o]:            
+                        st.session_state.selected_game = 'All Games'
+                    else: 
+                        st.session_state.selected_game = [t, o]  
 
 def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
