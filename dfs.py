@@ -215,11 +215,11 @@ def display_game_button_logos():
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
     half = math.ceil(len(games)/2)
-    cols = st.columns(half+2, vertical_alignment="bottom") 
+    cols = st.columns(half+2) 
     for i, (t, o) in enumerate(games.items()):
         with cols[i % half+1]:
             with st.container(border=True, gap=None, horizontal_alignment="center"):
-                col_cb1, col_cb2 = st.columns(2)
+                col_cb1, col_cb2 = st.columns(2, vertical_alignment="bottom")
                 with col_cb1:
                     st.image(logos[t], width=20)
                     st.image(logos[o], width=20)
