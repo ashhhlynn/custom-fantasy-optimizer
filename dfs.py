@@ -14,6 +14,40 @@ position_bounds = {
 } 
 teams = {}
 games = {}
+logos = {
+    "ARI": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png",
+    "ATL": "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png",
+    "BAL": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png",
+    "BUF": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png",
+    "CAR": "https://a.espncdn.com/i/teamlogos/nfl/500/car.png",
+    "CHI": "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png",
+    "CIN": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png",
+    "CLE": "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png",
+    "DAL": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png",
+    "DEN": "https://a.espncdn.com/i/teamlogos/nfl/500/den.png",
+    "DET": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
+    "GB": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",
+    "HOU": "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png",
+    "IND": "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png",
+    "JAX": "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png",
+    "KC": "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png",
+    "LV": "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png",
+    "LAC": "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png",
+    "LAR": "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png",
+    "MIA": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png",
+    "MIN": "https://a.espncdn.com/i/teamlogos/nfl/500/min.png",
+    "NE": "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png",
+    "NO": "https://a.espncdn.com/i/teamlogos/nfl/500/no.png",
+    "NYG": "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png",
+    "NYJ": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
+    "PHI": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png",
+    "PIT": "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png",
+    "SEA": "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png",
+    "SF": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png",
+    "TB": "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png",
+    "TEN": "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png",
+    "WAS": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png",
+}
 
 def run_app():
     sleeper_players = fetch_sleeper_projections()       
@@ -74,14 +108,15 @@ def fetch_dk_players(sleeper_players):
     return dk_players
 
 def load_streamlit(dk_players, players_df, lineup_df):
-    st.set_page_config(layout='wide')        
+    st.set_page_config(layout='wide')       
     col_1, col_2, col_3 = st.columns([1,6,1])
     col_1.empty()
-    with col_2:
-        display_game_buttons()
-        st.markdown(' ')
-        st.markdown(' ')
+    # TEMP with col_2:            
+    # TEMP display_game_buttons()
     col_3.empty()
+    display_game_button_logos()
+    st.markdown(' ')
+    st.markdown(' ')
     col_a, col_b, col_c = st.columns([24,2,12])
     with col_a:
         col_a1, col_a2, col_a3 = st.columns([3,1,2])
@@ -136,13 +171,12 @@ def display_input_controls():
             qb_rb_opp = st.checkbox('QB + Opp. RB')
             qb_wr_opp = st.checkbox('QB + Opp. WR')
             qb_te_opp = st.checkbox('QB + Opp. TE')
-        col_f1, col_f2, col_f3 = st.columns([30,16,1])
+        col_f1, col_f2 = st.columns([30,17], vertical_alignment='bottom')
         options = ["RB", "WR", "TE"]
         with col_f1:
             flex_input = st.segmented_control("FLEX Position and Team (Min 1)", options, selection_mode="single")
         with col_f2:
-            flex_team_input = st.selectbox("Flex Team", (teams.keys()), placeholder="Team", label_visibility='hidden', index=None)        
-        col_f3.empty()
+            flex_team_input = st.selectbox("Flex Team", (teams.keys()), placeholder="Team", label_visibility='collapsed', index=None)        
         dst_excl = st.toggle("Exclude Opposing DST")
         rb_max = st.toggle("Maximum 1 RB / Team")
         input_controls = {
@@ -176,6 +210,22 @@ def display_game_buttons():
         else:
             if cols[i % half].button(f"**:primary[●] {t_ab}  \n:primary[●] {o_ab}**", use_container_width=True):
                 st.session_state.selected_game = [t, o]            
+
+def display_game_button_logos():
+    if 'selected_game' not in st.session_state:
+        st.session_state.selected_game = 'All Games'  
+    half = math.ceil(len(games)/2)
+    cols = st.columns(half+2) 
+    for i, (t, o) in enumerate(games.items()):
+        with cols[i % half+1]:
+            with st.container(border=True, gap='small'):
+                col_cb1, col_cb2 = st.columns(2, vertical_alignment='center')
+                with col_cb1:
+                    st.image(logos[t], width=20)
+                    st.image(logos[o], width=20)
+                with col_cb2:
+                    st.markdown(f'**:primary[{t}]**')
+                    st.markdown(f'**:primary[{o}]**')
 
 def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
