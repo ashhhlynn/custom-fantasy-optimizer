@@ -175,7 +175,7 @@ def display_game_button_logos():
         st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
         with cols[i % 6 + 1]:       
-            with st.container(border=True, gap=None, vertical_alignment='top', height=84):
+            with st.container(border=True, gap=None, vertical_alignment='bottom', height=84):
                 col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
                 with col_cb1:
                     if st_image_button("", f"logos/{t}.png", "18px", "solid", "#000000", f"{t}"):
@@ -194,7 +194,7 @@ def display_game_button_logos():
         if i == len(games)-1 and i < 11:
             for n in range(12-len(games)): 
                 with cols[(i+1+n) % 6 + 1]:
-                    with st.container(border=True, gap=None, vertical_alignment='top', height=84):
+                    with st.container(border=True, gap=None, vertical_alignment='bottom', height=84):
                         col_cf1, col_cf2 = st.columns([1,1], vertical_alignment='center')
                         with col_cf1:
                             st.markdown('🏈')
