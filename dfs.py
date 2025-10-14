@@ -4,6 +4,8 @@ from pulp import *
 import pandas as pd 
 import streamlit as st 
 from streamlit_searchbox import st_searchbox
+from st_image_button import st_image_button
+import os
 
 position_bounds = {
     'QB': {'min': 1, 'max': 1},
@@ -14,40 +16,7 @@ position_bounds = {
 } 
 teams = {}
 games = {}
-logos = {
-    "ARI": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png",
-    "ATL": "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png",
-    "BAL": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png",
-    "BUF": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png",
-    "CAR": "https://a.espncdn.com/i/teamlogos/nfl/500/car.png",
-    "CHI": "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png",
-    "CIN": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png",
-    "CLE": "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png",
-    "DAL": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png",
-    "DEN": "https://a.espncdn.com/i/teamlogos/nfl/500/den.png",
-    "DET": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
-    "GB": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",
-    "HOU": "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png",
-    "IND": "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png",
-    "JAX": "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png",
-    "KC": "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png",
-    "LV": "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png",
-    "LAC": "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png",
-    "LAR": "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png",
-    "MIA": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png",
-    "MIN": "https://a.espncdn.com/i/teamlogos/nfl/500/min.png",
-    "NE": "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png",
-    "NO": "https://a.espncdn.com/i/teamlogos/nfl/500/no.png",
-    "NYG": "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png",
-    "NYJ": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
-    "PHI": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png",
-    "PIT": "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png",
-    "SEA": "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png",
-    "SF": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png",
-    "TB": "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png",
-    "TEN": "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png",
-    "WAS": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png",
-}
+logos = {}
 
 def run_app():
     sleeper_players = fetch_sleeper_projections()       
@@ -65,7 +34,7 @@ def run_app():
     load_streamlit(dk_players, players_df, lineup_df)
 
 def fetch_sleeper_projections():
-    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/6?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
+    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/7?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
     json_sleeper_data = json.loads(sleeper_API.text)    
     sleeper_players = {}
     for item in json_sleeper_data:
@@ -77,7 +46,7 @@ def fetch_sleeper_projections():
     return sleeper_players
 
 def fetch_dk_players(sleeper_players): 
-    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/135005/draftables')
+    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/135374/draftables')
     json_dk_data = json.loads(dk_API.text)
     dk_players = {}
     for index, item in enumerate(json_dk_data['draftables']):
@@ -103,9 +72,20 @@ def fetch_dk_players(sleeper_players):
             dk_players.update(info)
         if item['position'] == 'DST' and item['teamAbbreviation'] not in teams:
             teams.update({item['teamAbbreviation']: opponent}) 
+            lower_abbr = item['teamAbbreviation'].lower()
+            logos.update({item['teamAbbreviation']: f"https://a.espncdn.com/i/teamlogos/nfl/500/{lower_abbr}.png"})
             if opponent not in games:
                 games.update({item['teamAbbreviation']: opponent})
+    create_logos()
     return dk_players
+
+def create_logos():
+    os.makedirs("logos", exist_ok=True)
+    for team, url in logos.items():
+        resp = requests.get(url)
+        if resp.status_code == 200:
+            with open(f"logos/{team}.png", "wb") as f:
+                f.write(resp.content)
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')           
@@ -114,17 +94,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
     st.markdown(' ')
     col_a, col_b, col_c = st.columns([24,2,12])
     with col_a:
-        col_a1, col_a2, col_a3 = st.columns([3,1,2])
-        with col_a1:
-            def search_data(searchterm: str) -> list:
-                if not searchterm:
-                    return []
-                results = players_df[players_df['name'].str.contains(searchterm, case=False)]
-                return(results['name'].tolist())            
-            selected_value = st_searchbox(search_data, placeholder="Search", key="search_key")
-        col_a2.empty()
-        with col_a3:
-            position_filter = st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')    
+        selected_value, position_filter = display_queue_filters(players_df)
         edited_df = display_players_queue(players_df, position_filter, selected_value)
     col_b.empty()
     with col_c:
@@ -147,10 +117,24 @@ def load_streamlit(dk_players, players_df, lineup_df):
             with col_j:
                 st.write(0.00, "  \n", 50000)
 
+def display_queue_filters(players_df):
+    col_a1, col_a2, col_a3 = st.columns([3,1,2])
+    with col_a1:
+        def search_data(searchterm: str) -> list:
+            if not searchterm:
+                return []
+            results = players_df[players_df['name'].str.contains(searchterm, case=False)]
+            return(results['name'].tolist())            
+        selected_value = st_searchbox(search_data, placeholder="Search", key="search_key")
+    col_a2.empty()
+    with col_a3:
+        position_filter = st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')   
+    return(selected_value, position_filter)
+
 def display_input_controls():
     with st.container(border=True):
         col_c1, col_c2 = st.columns([10,1])
-        col_c1.write("**Customize**")
+        col_c1.write("**:grey[Customization]**")
         col_c2.write('⚙️')
         with st.expander("Team Stacks"):
             col_s1, col_s2 = st.columns(2)
@@ -190,32 +174,36 @@ def display_game_button_logos():
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
-        if len(t) == 3:
-            t_ab = t
-        else:
-            t_ab = t + '&nbsp;&nbsp;'
-        if len(o) == 3:
-            o_ab = o
-        else:
-            o_ab = o + '&nbsp;&nbsp;'
-        with cols[i % 6 + 1]: 
-            with st.container(border=True, height=88, gap=None):
+        with cols[i % 6 + 1]:       
+            with st.container(border=True, gap=None):
                 col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
                 with col_cb1:
-                    st.image(logos[t], width=20)
-                    st.image(logos[o], width=20)
-                if col_cb2.button(f'**:primary[{t_ab}  \n{o_ab}]**', type="tertiary"):
-                    if st.session_state.selected_game == [t, o]:            
-                        st.session_state.selected_game = 'All Games'
-                    else: 
-                        st.session_state.selected_game = [t, o]  
-        if i == len(games)-1 and len(games) < 12:
-            for n in range(12-len(games)):
-                c = (i+1+n) % 6 + 1
-                with cols[c]:
-                    with st.container(border=True, height=88):
-                        st.caption('🏈')
-                        st.caption('🏈')
+                    if st_image_button("", f"logos/{t}.png", "18px", "solid", "#000000", f"{t}"):
+                        if st.session_state.selected_game == [t, o]:            
+                            st.session_state.selected_game = 'All Games'
+                        else: 
+                            st.session_state.selected_game = [t, o]  
+                    if st_image_button("", f"logos/{o}.png", "18px", "solid", "#000000", f"{o}"):            
+                        if st.session_state.selected_game == [t, o]:            
+                            st.session_state.selected_game = 'All Games'
+                        else: 
+                            st.session_state.selected_game = [t, o]  
+                with col_cb2:
+                    st.markdown(f'**:primary[{t}]**')
+                    st.markdown(f'**:primary[{o}]**')
+        if i == len(games)-1 and i < 11:
+            for n in range(12-len(games)): 
+                with cols[(i+1+n) % 6 + 1]:
+                    with st.container(border=True, gap=None):
+                        col_cf1, col_cf2 = st.columns([1,1], vertical_alignment='center')
+                        with col_cf1:
+                            st.markdown('🏈')
+                            st.caption("")
+                            st.markdown('🏈')    
+                        with col_cf2:
+                            st.markdown('**:primary[N/A]**')
+                            st.caption("")
+                            st.markdown('**:primary[N/A]**')    
 
 def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
