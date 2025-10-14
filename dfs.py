@@ -225,7 +225,7 @@ def display_game_button_logos():
                 with col_cb1:
                     st.image(logos[t], width=20)
                     st.image(logos[o], width=20)
-                if col_cb2.button(f'**:primary[{t}  \n{o}]**', type="tertiary"):
+                if col_cb2.button(f'**:grey[{t}  \n&nbsp;  \n{o}]**', type="tertiary"):
                     if st.session_state.selected_game == [t, o]:            
                         st.session_state.selected_game = 'All Games'
                     else: 
