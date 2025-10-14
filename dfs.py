@@ -178,12 +178,7 @@ def display_game_button_logos():
             with st.container(border=True, gap=None, vertical_alignment='center', height=86):
                 col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
                 with col_cb1:
-                    if st_image_button("", f"logos/{t}.png", "18px", "solid", "#000000", f"{t}"):
-                        if st.session_state.selected_game == [t, o]:            
-                            st.session_state.selected_game = 'All Games'
-                        else: 
-                            st.session_state.selected_game = [t, o]  
-                    if st_image_button("", f"logos/{o}.png", "18px", "solid", "#000000", f"{o}"):            
+                    if st_image_button("", f"logos/{t}.png", "18px", "solid", "#000000", f"{t}") or st_image_button("", f"logos/{o}.png", "18px", "solid", "#000000", f"{o}"):
                         if st.session_state.selected_game == [t, o]:            
                             st.session_state.selected_game = 'All Games'
                         else: 
