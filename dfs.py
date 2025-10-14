@@ -215,7 +215,7 @@ def display_game_buttons():
 
 def display_game_button_logos():
     half = math.ceil(len(games)/2)
-    cols = st.columns(half+2) 
+    cols = st.columns(8) 
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
@@ -225,11 +225,19 @@ def display_game_button_logos():
                 with col_cb1:
                     st.image(logos[t], width=20)
                     st.image(logos[o], width=20)
-                if col_cb2.button(f'**:grey[{t}  \n&nbsp;  \n{o}]**', type="tertiary"):
+                if col_cb2.button(f'**:grey[{t}  \n{o}]**', type="tertiary"):
                     if st.session_state.selected_game == [t, o]:            
                         st.session_state.selected_game = 'All Games'
                     else: 
                         st.session_state.selected_game = [t, o]  
+        if i == len(games)-1 and len(games) < 12:
+            c = math.ceil((12-len(games))/2)
+            for n in range(12-len(games)):
+                t = i % half + 1 + c % (c+n+1)
+                with cols[t]:
+                    with st.container(border=True, gap=None):
+                        st.caption('🏈')
+                        st.caption('🏈')
 
 def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
