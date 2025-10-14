@@ -134,7 +134,7 @@ def display_queue_filters(players_df):
 def display_input_controls():
     with st.container(border=True):
         col_c1, col_c2 = st.columns([10,1])
-        col_c1.write("**:grey[Customization]**")
+        col_c1.write("**[Customization]**")
         col_c2.write('⚙️')
         with st.expander("Team Stacks"):
             col_s1, col_s2 = st.columns(2)
@@ -175,7 +175,7 @@ def display_game_button_logos():
         st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
         with cols[i % 6 + 1]:       
-            with st.container(border=True, gap=None):
+            with st.container(border=True, gap=None, vertical_alignment='center', height=88):
                 col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
                 with col_cb1:
                     if st_image_button("", f"logos/{t}.png", "18px", "solid", "#000000", f"{t}"):
@@ -194,15 +194,13 @@ def display_game_button_logos():
         if i == len(games)-1 and i < 11:
             for n in range(12-len(games)): 
                 with cols[(i+1+n) % 6 + 1]:
-                    with st.container(border=True, gap=None):
+                    with st.container(border=True, gap=None, vertical_alignment='center', height=88):
                         col_cf1, col_cf2 = st.columns([1,1], vertical_alignment='center')
                         with col_cf1:
                             st.markdown('🏈')
-                            st.caption("")
                             st.markdown('🏈')    
                         with col_cf2:
                             st.markdown('**:primary[N/A]**')
-                            st.caption("")
                             st.markdown('**:primary[N/A]**')    
 
 def display_players_queue(players_df, position_filter, selected_value):
