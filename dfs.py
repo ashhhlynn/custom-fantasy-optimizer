@@ -109,13 +109,6 @@ def fetch_dk_players(sleeper_players):
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')           
-    # Temp Hidden:  
-    # col_1, col_2, col_3 = st.columns([1,6,1])
-    # col_1.empty() 
-    # with col_2:            
-    #    display_game_buttons()
-    # col_3.empty()
-    # Temp Hidden:
     display_game_button_logos()
     st.markdown(' ')
     st.markdown(' ')
@@ -176,7 +169,7 @@ def display_input_controls():
         col_f1, col_f2 = st.columns([32,20], vertical_alignment='bottom')
         options = ["RB", "WR", "TE"]
         with col_f1:
-            flex_input = st.segmented_control("FLEX Position and Team (Min 1)", options, selection_mode="single")
+            flex_input = st.segmented_control("FLEX Position and Team (Incl.)", options, selection_mode="single")
         with col_f2:
             flex_team_input = st.selectbox("Flex Team", (teams.keys()), placeholder="Team", label_visibility='collapsed', index=None)        
         dst_excl = st.toggle("Exclude Opposing DST")
@@ -192,29 +185,7 @@ def display_input_controls():
         }
     return(input_controls)
 
-def display_game_buttons():
-    half = math.ceil(len(games)/2)
-    cols = st.columns(half)
-    if 'selected_game' not in st.session_state:
-        st.session_state.selected_game = 'All Games'  
-    for i, (t, o) in enumerate(games.items()):
-        if len(t) == 3:
-            t_ab = t
-        else:
-            t_ab = t + '&nbsp;&nbsp;'
-        if len(o) == 3:
-            o_ab = o
-        else:
-            o_ab = o + '&nbsp;&nbsp;'
-        if st.session_state.selected_game == [t, o]:            
-            if cols[i % half].button(f"**:primary[●] {t_ab}  \n:primary[●] {o_ab}**", use_container_width=True):
-                st.session_state.selected_game = 'All Games'
-        else:
-            if cols[i % half].button(f"**:primary[●] {t_ab}  \n:primary[●] {o_ab}**", use_container_width=True):
-                st.session_state.selected_game = [t, o]            
-
 def display_game_button_logos():
-    half = math.ceil(len(games)/2)
     cols = st.columns(8) 
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
@@ -227,22 +198,21 @@ def display_game_button_logos():
             o_ab = o
         else:
             o_ab = o + '&nbsp;&nbsp;'
-        with cols[i % half+1]:
+        with cols[i % 6 + 1]: 
             with st.container(border=True, height=88, gap=None):
                 col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
                 with col_cb1:
                     st.image(logos[t], width=20)
                     st.image(logos[o], width=20)
-                if col_cb2.button(f'**:grey[{t_ab}  \n{o_ab}]**', type="tertiary"):
+                if col_cb2.button(f'**:primary[{t_ab}  \n{o_ab}]**', type="tertiary"):
                     if st.session_state.selected_game == [t, o]:            
                         st.session_state.selected_game = 'All Games'
                     else: 
                         st.session_state.selected_game = [t, o]  
         if i == len(games)-1 and len(games) < 12:
-            c = math.ceil((12-len(games))/2)
             for n in range(12-len(games)):
-                t = i % half + 1 + c % (c+n+1)
-                with cols[t]:
+                c = (i+1+n) % 6 + 1
+                with cols[c]:
                     with st.container(border=True, height=88):
                         st.caption('🏈')
                         st.caption('🏈')
