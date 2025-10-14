@@ -89,7 +89,7 @@ def create_logos():
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')           
-    display_game_button_logos()
+    display_game_button_logos_v2()
     st.markdown(' ')
     st.markdown(' ')
     col_a, col_b, col_c = st.columns([24,2,12])
@@ -169,6 +169,41 @@ def display_input_controls():
         }
     return(input_controls)
 
+def display_game_button_logos_v2():
+    cols = st.columns(8) 
+    if 'selected_game' not in st.session_state:
+        st.session_state.selected_game = 'All Games'  
+    for i, (t, o) in enumerate(games.items()):
+        if len(t) == 3:
+            t_ab = t
+        else:
+            t_ab = t + '&nbsp;&nbsp;'
+        if len(o) == 3:
+            o_ab = o
+        else:
+            o_ab = o + '&nbsp;&nbsp;'
+        with cols[i % 6 + 1]: 
+            with st.container(border=True, height=88):
+                col_cb1, col_cb2 = st.columns([1,3], vertical_alignment='center')
+                with col_cb1:
+                    st.image(logos[t], width=20)
+                    st.image(logos[o], width=20)
+                if col_cb2.button(f'**{t_ab}  \n{o_ab}**', type="tertiary"):
+                    if st.session_state.selected_game == [t, o]:            
+                        st.session_state.selected_game = 'All Games'
+                    else: 
+                        st.session_state.selected_game = [t, o]  
+        if i == len(games)-1 and len(games) < 12:
+            for n in range(12-len(games)):
+                c = (i+1+n) % 6 + 1
+                with cols[c]:
+                    with st.container(border=True, height=88):
+                        col_cf1, col_cf2 = st.columns([1,3], vertical_alignment='center')
+                        with col_cf1:
+                            st.caption('🏈')
+                            st.caption('🏈')
+                        col_cf2.button(f'**N/A  \nN/A**', f"cf{n}", type="tertiary", disabled=True)
+
 def display_game_button_logos():
     cols = st.columns(8) 
     if 'selected_team' not in st.session_state:
@@ -211,11 +246,11 @@ def display_players_queue(players_df, position_filter, selected_value):
         for index, updates in edited_data.items():
             original_index = st.session_state.edited_df.iloc[index].name
             st.session_state.players_df.loc[original_index, updates.keys()] = updates.values()   
-    if position_filter != 'All' or st.session_state.selected_team != 'All Teams':
+    if position_filter != 'All' or st.session_state.selected_game != 'All Games':
         if position_filter != 'All':
             filtered_df = st.session_state.players_df[st.session_state.players_df['position'] == position_filter].copy()
         else:
-            filtered_df = st.session_state.players_df[st.session_state.players_df['team'] == st.session_state.selected_team].copy()
+            filtered_df = st.session_state.players_df[st.session_state.players_df['team'].isin(st.session_state.selected_game)].copy()
     else:
         filtered_df = st.session_state.players_df.copy()
     if selected_value:
@@ -365,5 +400,12 @@ def display_results(results, lineup_df):
                 final_lineup.at[flex_row[0], "PROJ"] = results[player]['projection']
                 final_lineup.at[flex_row[0], "SAL"] = results[player]['salary']
     return final_lineup
+
+
+
+
+
+
+
 
 run_app()
