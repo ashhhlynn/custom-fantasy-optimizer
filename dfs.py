@@ -171,18 +171,23 @@ def display_input_controls():
 
 def display_game_button_logos():
     cols = st.columns(8) 
-    if 'selected_game' not in st.session_state:
-        st.session_state.selected_game = 'All Games'  
+    if 'selected_team' not in st.session_state:
+        st.session_state.selected_team = 'All Teams'  
     for i, (t, o) in enumerate(games.items()):
         with cols[i % 6 + 1]:       
             with st.container(border=True, gap=None, vertical_alignment='center', height=86):
                 col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
                 with col_cb1:
-                    if st_image_button("", f"logos/{t}.png", "18px", "solid", "#000000", f"{t}") or st_image_button("", f"logos/{o}.png", "18px", "solid", "#000000", f"{o}"):
-                        if st.session_state.selected_game == [t, o]:            
-                            st.session_state.selected_game = 'All Games'
+                    if st_image_button("", f"logos/{t}.png", "18px", "solid", "#000000", f"{t}"): 
+                        if st.session_state.selected_team == t:         
+                            st.session_state.selected_team = 'All Teams'
                         else: 
-                            st.session_state.selected_game = [t, o]  
+                            st.session_state.selected_team = t
+                    if st_image_button("", f"logos/{o}.png", "18px", "solid", "#000000", f"{o}"):
+                        if st.session_state.selected_team == o:            
+                            st.session_state.selected_team = 'All Teams'
+                        else: 
+                            st.session_state.selected_team = o
                 with col_cb2:
                     st.markdown(f'**:primary[{t}]**')
                     st.markdown(f'**:primary[{o}]**')
@@ -206,11 +211,11 @@ def display_players_queue(players_df, position_filter, selected_value):
         for index, updates in edited_data.items():
             original_index = st.session_state.edited_df.iloc[index].name
             st.session_state.players_df.loc[original_index, updates.keys()] = updates.values()   
-    if position_filter != 'All' or st.session_state.selected_game != 'All Games':
+    if position_filter != 'All' or st.session_state.selected_team != 'All Teams':
         if position_filter != 'All':
             filtered_df = st.session_state.players_df[st.session_state.players_df['position'] == position_filter].copy()
         else:
-            filtered_df = st.session_state.players_df[st.session_state.players_df['team'].isin(st.session_state.selected_game)].copy()
+            filtered_df = st.session_state.players_df[st.session_state.players_df['team'] == st.session_state.selected_team].copy()
     else:
         filtered_df = st.session_state.players_df.copy()
     if selected_value:
