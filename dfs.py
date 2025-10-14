@@ -219,13 +219,21 @@ def display_game_button_logos():
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
+        if len(t) == 3:
+            t_ab = t
+        else:
+            t_ab = t + '&nbsp;&nbsp;'
+        if len(o) == 3:
+            o_ab = o
+        else:
+            o_ab = o + '&nbsp;&nbsp;'
         with cols[i % half+1]:
-            with st.container(border=True, gap=None):
+            with st.container(border=True, height=88, gap=None):
                 col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
                 with col_cb1:
                     st.image(logos[t], width=20)
                     st.image(logos[o], width=20)
-                if col_cb2.button(f'**:grey[{t}  \n{o}]**', type="tertiary"):
+                if col_cb2.button(f'**:grey[{t_ab}  \n{o_ab}]**', type="tertiary"):
                     if st.session_state.selected_game == [t, o]:            
                         st.session_state.selected_game = 'All Games'
                     else: 
@@ -235,7 +243,7 @@ def display_game_button_logos():
             for n in range(12-len(games)):
                 t = i % half + 1 + c % (c+n+1)
                 with cols[t]:
-                    with st.container(border=True, gap=None):
+                    with st.container(border=True, height=88):
                         st.caption('🏈')
                         st.caption('🏈')
 
