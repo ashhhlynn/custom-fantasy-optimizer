@@ -70,15 +70,14 @@ def fetch_dk_players(sleeper_players):
             dk_players.update(info)
         if item['position'] == 'DST' and item['teamAbbreviation'] not in teams:
             teams.update({item['teamAbbreviation']: opponent}) 
-            lower_abbr = item['teamAbbreviation'].lower()
-            logos.update({item['teamAbbreviation']: f"https://a.espncdn.com/i/teamlogos/nfl/500/{lower_abbr}.png"})
+            logos.update({item['teamAbbreviation']: f"https://a.espncdn.com/i/teamlogos/nfl/500/{item['teamAbbreviation'].lower()}.png"})
             if opponent not in games:
                 games.update({item['teamAbbreviation']: opponent})
     return dk_players
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')           
-    display_game_button_logos_v2()
+    display_game_button_logos()
     st.markdown(' ')
     st.markdown(' ')
     col_a, col_b, col_c = st.columns([24,2,12])
@@ -158,7 +157,7 @@ def display_input_controls():
         }
     return(input_controls)
 
-def display_game_button_logos_v2():
+def display_game_button_logos():
     cols = st.columns(8) 
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
@@ -172,12 +171,12 @@ def display_game_button_logos_v2():
         else:
             o_ab = o + '&nbsp;&nbsp;'
         with cols[i % 6 + 1]: 
-            with st.container(border=True, gap=None, height=88):
+            with st.container(border=True, gap=True, height=88):
                 col_cb1, col_cb2 = st.columns([2,3], vertical_alignment='center')
                 with col_cb1:
-                    st.image(logos[t], width=20)
-                    st.image(logos[o], width=20)
-                if col_cb2.button(f'**:primary[{t_ab}  \n{o_ab}]**', type="tertiary"):
+                    st.image(logos[t], width=16)
+                    st.image(logos[o], width=16)
+                if col_cb2.button(f'**:primary[{t_ab}  \n{o_ab}]**', type='tertiary'):
                     if st.session_state.selected_game == [t, o]:            
                         st.session_state.selected_game = 'All Games'
                     else: 
@@ -185,13 +184,9 @@ def display_game_button_logos_v2():
         if i == len(games)-1 and len(games) < 12:
             for n in range(12-len(games)):
                 c = (i+1+n) % 6 + 1
-                with cols[c]:
-                    with st.container(border=True, gap=None, height=88):
-                        col_cf1, col_cf2 = st.columns([2,3], vertical_alignment='center')
-                        with col_cf1:
-                            st.caption('🏈')
-                            st.caption('🏈')
-                        col_cf2.empty()
+                with cols[c].container(border=True, gap=None, height=88):
+                    st.caption('🏈')
+                    st.caption('🏈')
                             
 def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
