@@ -176,7 +176,7 @@ def display_game_button_logos():
             for n in range(11-i):
                 c = (i+1+n) % 6 + 1
                 with cols[c].container(border=True, height=82, vertical_alignment='center'):
-                    col_cf0, col_cf1, col_cf2 = st.columns([1,2,6])
+                    col_cf0, col_cf1, col_cf2 = st.columns([1,3,6])
                     col_cf0.empty()
                     col_cf1.caption('🏈  \n🏈')
                     col_cf2.empty()
