@@ -171,7 +171,7 @@ def display_game_button_logos():
         else:
             o_ab = o + '&nbsp;&nbsp;'
         with cols[i % 6 + 1]: 
-            with st.container(border=True, gap=True, height=88):
+            with st.container(border=True, gap=None, height=88):
                 col_cb1, col_cb2 = st.columns([2,3], vertical_alignment='center')
                 with col_cb1:
                     st.image(logos[t], width=16)
