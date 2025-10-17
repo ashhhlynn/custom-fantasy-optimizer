@@ -115,8 +115,7 @@ def display_queue_filters(players_df):
             return(results['name'].tolist())            
         selected_value = st_searchbox(search_data, placeholder="Search", key="search_key")
     col_a2.empty()
-    with col_a3:
-        position_filter = st.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')   
+    position_filter = col_a3.selectbox('Filters', ("All", "QB", "RB", "WR", "TE", "DST"), label_visibility='collapsed')   
     return(selected_value, position_filter)
 
 def display_input_controls():
@@ -140,10 +139,8 @@ def display_input_controls():
             qb_te_opp = st.checkbox('QB + Opp. TE')
         col_f1, col_f2 = st.columns([32,20], vertical_alignment='bottom')
         options = ["RB", "WR", "TE"]
-        with col_f1:
-            flex_input = st.segmented_control("FLEX Position and Team (Incl.)", options, selection_mode="single")
-        with col_f2:
-            flex_team_input = st.selectbox("Flex Team", (teams.keys()), placeholder="Team", label_visibility='collapsed', index=None)        
+        flex_input = col_f1.segmented_control("FLEX Position and Team (Incl.)", options, selection_mode="single")
+        flex_team_input = col_f2.selectbox("Flex Team", (teams.keys()), placeholder="Team", label_visibility='collapsed', index=None)        
         dst_excl = st.toggle("Exclude Opposing DST")
         rb_max = st.toggle("Maximum 1 RB / Team")
         input_controls = {
@@ -162,30 +159,27 @@ def display_game_button_logos():
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
-        if len(t) == 3:
-            t_ab = t
-        else:
-            t_ab = t + '&nbsp;&nbsp;'
-        if len(o) == 3:
-            o_ab = o
-        else:
-            o_ab = o + '&nbsp;&nbsp;'
-        with cols[i % 6 + 1]: 
-            with st.container(border=True, height=82, gap=None, vertical_alignment='center', horizontal_alignment='center'):
-                col_cb1, col_cb2 = st.columns([1,2])
-                with col_cb1:
-                    st.image(logos[t], width=16)
-                    st.image(logos[o], width=16)
-                if col_cb2.button(f'**{t_ab}  \n{o_ab}**', type='tertiary'):
-                    if st.session_state.selected_game == [t, o]:            
-                        st.session_state.selected_game = 'All Games'
-                    else: 
-                        st.session_state.selected_game = [t, o]  
+        with cols[i % 6 + 1].container(border=True, height=82, gap=None, vertical_alignment='center'):
+            t_ab = t if len(t) == 3 else f"{t:<3}"
+            o_ab = o if len(o) == 3 else f"{o:<3}"
+            col_cb0, col_cb1, col_cb2 = st.columns([1,2,5])
+            col_cb0.empty()
+            with col_cb1:
+                st.image(logos[t], width=16)
+                st.image(logos[o], width=16)
+            if col_cb2.button(f'**{t_ab}  \n{o_ab}**', type='tertiary'):
+                if st.session_state.selected_game == [t, o]:            
+                    st.session_state.selected_game = 'All Games'
+                else: 
+                    st.session_state.selected_game = [t, o]  
         if i == len(games)-1 and len(games) < 12:
-            for n in range(12-len(games)):
+            for n in range(11-i):
                 c = (i+1+n) % 6 + 1
-                with cols[c].container(border=True, height=82, vertical_alignment='center', horizontal_alignment='center'):
-                    st.caption('🏈  \n🏈')
+                with cols[c].container(border=True, height=82, vertical_alignment='center'):
+                    col_cf0, col_cf1, col_cf2 = st.columns([1,2,5])
+                    col_cf0.empty()
+                    col_cf1.caption('🏈  \n🏈')
+                    col_cf2.empty()
                             
 def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
