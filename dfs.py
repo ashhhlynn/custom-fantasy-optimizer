@@ -4,8 +4,6 @@ from pulp import *
 import pandas as pd 
 import streamlit as st 
 from streamlit_searchbox import st_searchbox
-from st_image_button import st_image_button
-import os
 
 position_bounds = {
     'QB': {'min': 1, 'max': 1},
@@ -76,16 +74,7 @@ def fetch_dk_players(sleeper_players):
             logos.update({item['teamAbbreviation']: f"https://a.espncdn.com/i/teamlogos/nfl/500/{lower_abbr}.png"})
             if opponent not in games:
                 games.update({item['teamAbbreviation']: opponent})
-    create_logos()
     return dk_players
-
-def create_logos():
-    os.makedirs("logos", exist_ok=True)
-    for team, url in logos.items():
-        resp = requests.get(url)
-        if resp.status_code == 200:
-            with open(f"logos/{team}.png", "wb") as f:
-                f.write(resp.content)
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')           
@@ -183,12 +172,12 @@ def display_game_button_logos_v2():
         else:
             o_ab = o + '&nbsp;&nbsp;'
         with cols[i % 6 + 1]: 
-            with st.container(border=True, height=88):
+            with st.container(border=True, gap=None, height=88):
                 col_cb1, col_cb2 = st.columns([2,3], vertical_alignment='center')
                 with col_cb1:
                     st.image(logos[t], width=20)
                     st.image(logos[o], width=20)
-                if col_cb2.button(f'**{t_ab}  \n{o_ab}**', type="tertiary"):
+                if col_cb2.button(f'**:primary[{t_ab}  \n{o_ab}]**', type="tertiary"):
                     if st.session_state.selected_game == [t, o]:            
                         st.session_state.selected_game = 'All Games'
                     else: 
@@ -202,42 +191,8 @@ def display_game_button_logos_v2():
                         with col_cf1:
                             st.caption('🏈')
                             st.caption('🏈')
-                        col_cf2.button(f'**N/A  \nN/A**', f"cf{n}", type="tertiary", disabled=True)
-
-def display_game_button_logos():
-    cols = st.columns(8) 
-    if 'selected_team' not in st.session_state:
-        st.session_state.selected_team = 'All Teams'  
-    for i, (t, o) in enumerate(games.items()):
-        with cols[i % 6 + 1]:       
-            with st.container(border=True, gap=None, vertical_alignment='center', height=86):
-                col_cb1, col_cb2 = st.columns([1,1], vertical_alignment='center')
-                with col_cb1:
-                    if st_image_button("", f"logos/{t}.png", "18px", "solid", "#000000", f"{t}"): 
-                        if st.session_state.selected_team == t:         
-                            st.session_state.selected_team = 'All Teams'
-                        else: 
-                            st.session_state.selected_team = t
-                    if st_image_button("", f"logos/{o}.png", "18px", "solid", "#000000", f"{o}"):
-                        if st.session_state.selected_team == o:            
-                            st.session_state.selected_team = 'All Teams'
-                        else: 
-                            st.session_state.selected_team = o
-                with col_cb2:
-                    st.markdown(f'**:primary[{t}]**')
-                    st.markdown(f'**:primary[{o}]**')
-        if i == len(games)-1 and i < 11:
-            for n in range(12-len(games)): 
-                with cols[(i+1+n) % 6 + 1]:
-                    with st.container(border=True, gap=None, vertical_alignment='center', height=86):
-                        col_cf1, col_cf2 = st.columns([1,1], vertical_alignment='center')
-                        with col_cf1:
-                            st.markdown('🏈')
-                            st.markdown('🏈')    
-                        with col_cf2:
-                            st.markdown('**:primary[N/A]**')
-                            st.markdown('**:primary[N/A]**')    
-
+                        col_cf2.empty()
+                            
 def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
         st.session_state.players_df = players_df
@@ -400,12 +355,5 @@ def display_results(results, lineup_df):
                 final_lineup.at[flex_row[0], "PROJ"] = results[player]['projection']
                 final_lineup.at[flex_row[0], "SAL"] = results[player]['salary']
     return final_lineup
-
-
-
-
-
-
-
 
 run_app()
