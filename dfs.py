@@ -171,12 +171,12 @@ def display_game_button_logos():
         else:
             o_ab = o + '&nbsp;&nbsp;'
         with cols[i % 6 + 1]: 
-            with st.container(border=True, gap=None, height=86):
+            with st.container(border=True, gap=None, height=84):
                 col_cb1, col_cb2 = st.columns([1,2], vertical_alignment='center')
                 with col_cb1:
                     st.image(logos[t], width=16)
                     st.image(logos[o], width=16)
-                if col_cb2.button(f'**:primary[{t_ab}  \n{o_ab}]**', type='tertiary'):
+                if col_cb2.button(f'**{t_ab}  \n{o_ab}**', type='tertiary'):
                     if st.session_state.selected_game == [t, o]:            
                         st.session_state.selected_game = 'All Games'
                     else: 
@@ -184,9 +184,8 @@ def display_game_button_logos():
         if i == len(games)-1 and len(games) < 12:
             for n in range(12-len(games)):
                 c = (i+1+n) % 6 + 1
-                with cols[c].container(border=True, height=86):
-                    st.caption('🏈')
-                    st.caption('🏈')
+                with cols[c].container(border=True, height=86, vertical_alignment='center'):
+                    st.caption('🏈  \n🏈')
                             
 def display_players_queue(players_df, position_filter, selected_value):
     if 'players_df' not in st.session_state:
