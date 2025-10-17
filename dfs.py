@@ -171,8 +171,8 @@ def display_game_button_logos():
         else:
             o_ab = o + '&nbsp;&nbsp;'
         with cols[i % 6 + 1]: 
-            with st.container(border=True, gap=None, height=82, vertical_alignment='center'):
-                col_cb1, col_cb2 = st.columns([1,2], vertical_alignment='center')
+            with st.container(border=True, height=82, gap=None, vertical_alignment='center', horizontal_alignment='center'):
+                col_cb1, col_cb2 = st.columns([1,2])
                 with col_cb1:
                     st.image(logos[t], width=16)
                     st.image(logos[o], width=16)
@@ -184,7 +184,7 @@ def display_game_button_logos():
         if i == len(games)-1 and len(games) < 12:
             for n in range(12-len(games)):
                 c = (i+1+n) % 6 + 1
-                with cols[c].container(border=True, height=82, vertical_alignment='center'):
+                with cols[c].container(border=True, height=82, vertical_alignment='center', horizontal_alignment='center'):
                     st.caption('🏈  \n🏈')
                             
 def display_players_queue(players_df, position_filter, selected_value):
@@ -195,13 +195,14 @@ def display_players_queue(players_df, position_filter, selected_value):
         for index, updates in edited_data.items():
             original_index = st.session_state.edited_df.iloc[index].name
             st.session_state.players_df.loc[original_index, updates.keys()] = updates.values()   
-    if position_filter != 'All' or st.session_state.selected_game != 'All Games':
-        if position_filter != 'All':
-            filtered_df = st.session_state.players_df[st.session_state.players_df['position'] == position_filter].copy()
-        else:
-            filtered_df = st.session_state.players_df[st.session_state.players_df['team'].isin(st.session_state.selected_game)].copy()
-    else:
-        filtered_df = st.session_state.players_df.copy()
+    if st.session_state.selected_game != 'All Games' and position_filter != 'All':
+        filtered_df = st.session_state.players_df[(st.session_state.players_df['team'].isin(st.session_state.selected_game)) & (st.session_state.players_df['position'] == position_filter)].copy() 
+    elif st.session_state.selected_game != 'All Games':
+        filtered_df = st.session_state.players_df[st.session_state.players_df['team'].isin(st.session_state.selected_game)].copy() 
+    elif position_filter != 'All':
+        filtered_df = st.session_state.players_df[st.session_state.players_df['position'] == position_filter].copy() 
+    else: 
+        filtered_df = st.session_state.players_df.copy()   
     if selected_value:
         filtered_df = st.session_state.players_df[st.session_state.players_df['name'] == selected_value].copy() 
     with st.container():
