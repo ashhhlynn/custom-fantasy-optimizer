@@ -162,7 +162,7 @@ def display_game_button_logos():
         with cols[i % 6 + 1].container(border=True, height=82, gap=None, horizontal_alignment='center', vertical_alignment='center'):
             t_ab = t if len(t) == 3 else t + '&nbsp;&nbsp;'
             o_ab = o if len(o) == 3 else o + '&nbsp;&nbsp;'
-            col_cb1, col_cb2 = st.columns([2,3])
+            col_cb1, col_cb2 = st.columns([2,2])
             with col_cb1:
                 st.image(logos[t], width=16)
                 st.image(logos[o], width=16)
@@ -175,7 +175,7 @@ def display_game_button_logos():
             for n in range(11-i):
                 c = (i+1+n) % 6 + 1
                 with cols[c].container(border=True, height=82, horizontal_alignment='center', vertical_alignment='center'):
-                    col_cf1, col_cf2 = st.columns([2,3])
+                    col_cf1, col_cf2 = st.columns([2,2])
                     col_cf1.caption('🏈  \n🏈')
                     col_cf2.empty()
                             
