@@ -122,7 +122,7 @@ def display_queue_filters(players_df):
 def display_input_controls():
     with st.container(border=True):
         col_c1, col_c2 = st.columns([10,1])
-        col_c1.write("**Custom**")
+        col_c1.write("**Customize**")
         col_c2.write('⚙️')
         with st.expander("Team Stacks"):
             col_s1, col_s2 = st.columns(2)
@@ -171,7 +171,7 @@ def display_game_button_logos():
         else:
             o_ab = o + '&nbsp;&nbsp;'
         with cols[i % 6 + 1]: 
-            with st.container(border=True, gap=None, height=82):
+            with st.container(border=True, gap=None, height=82, vertical_alignment='center'):
                 col_cb1, col_cb2 = st.columns([1,2], vertical_alignment='center')
                 with col_cb1:
                     st.image(logos[t], width=16)
