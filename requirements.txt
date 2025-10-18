@@ -3,4 +3,3 @@ pandas
 pulp
 requests
 streamlit_searchbox
-streamlit_image_button

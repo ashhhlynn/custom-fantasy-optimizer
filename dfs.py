@@ -41,7 +41,7 @@ def fetch_sleeper_projections():
             sleeper_players.update({item['player']['last_name']: projection})
         elif projection: 
             sleeper_players.update({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
-    return sleeper_players
+    return(sleeper_players)
 
 def fetch_dk_players(sleeper_players): 
     dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/135374/draftables')
@@ -68,18 +68,18 @@ def fetch_dk_players(sleeper_players):
                 if short in sleeper_players:
                     info[str(index)]['projection'] = sleeper_players[short]
             dk_players.update(info)
-        if item['position'] == 'DST' and item['teamAbbreviation'] not in teams:
-            teams.update({item['teamAbbreviation']: opponent}) 
-            logos.update({item['teamAbbreviation']: f"https://a.espncdn.com/i/teamlogos/nfl/500/{item['teamAbbreviation'].lower()}.png"})
-            if opponent not in games:
-                games.update({item['teamAbbreviation']: opponent})
-    return dk_players
+            if item['position'] == 'DST' and item['teamAbbreviation'] not in teams:
+                teams.update({item['teamAbbreviation']: opponent}) 
+                logos.update({item['teamAbbreviation']: f"https://a.espncdn.com/i/teamlogos/nfl/500/{item['teamAbbreviation'].lower()}.png"})
+                if opponent not in games:
+                    games.update({item['teamAbbreviation']: opponent})
+    return(dk_players)
 
 def load_streamlit(dk_players, players_df, lineup_df):
     st.set_page_config(layout='wide')           
     display_game_button_logos()
     st.markdown(' ')
-    st.markdown(' ')
+    st.markdown(' ')    
     col_a, col_b, col_c = st.columns([24,2,12])
     with col_a:
         selected_value, position_filter = display_queue_filters(players_df)
@@ -124,6 +124,7 @@ def display_input_controls():
         col_c1.write("**Customize**")
         col_c2.write('⚙️')
         with st.expander("Team Stacks"):
+            st.caption("Require 2 players from the same team:")
             col_s1, col_s2 = st.columns(2)
             with col_s1:
                 qb_rb = st.checkbox('QB + RB')
@@ -134,15 +135,15 @@ def display_input_controls():
                 qb_flex = st.checkbox('QB + FLEX')
                 dst_rb = st.checkbox('RB + DST')
         with st.expander("Opponent Stacks"):
-            qb_rb_opp = st.checkbox('QB + Opp. RB')
-            qb_wr_opp = st.checkbox('QB + Opp. WR')
-            qb_te_opp = st.checkbox('QB + Opp. TE')
+            st.caption("Require Quarterback and opposing players:")
+            qb_rb_opp = st.checkbox('QB + RB', key='rb_opp')
+            qb_wr_opp = st.checkbox('QB + WR', key='wr_opp')
+            qb_te_opp = st.checkbox('QB + TE', key='te_opp')
         col_f1, col_f2 = st.columns([32,20], vertical_alignment='bottom')
-        options = ["RB", "WR", "TE"]
-        flex_input = col_f1.segmented_control("FLEX Position and Team (Incl.)", options, selection_mode="single")
+        flex_input = col_f1.segmented_control("FLEX Position and Team (Incl.)", ["RB", "WR", "TE"], selection_mode="single")
         flex_team_input = col_f2.selectbox("Flex Team", (teams.keys()), placeholder="Team", label_visibility='collapsed', index=None)        
-        dst_excl = st.toggle("Exclude Opposing DST")
-        rb_max = st.toggle("Maximum 1 RB / Team")
+        dst_excl = st.toggle("Exclude Players Opposing DST")
+        rb_max = st.toggle("Maximum 1 RB per Team")
         input_controls = {
             'qb_stacks_team': {'QB_RB': qb_rb, 'QB_WR': qb_wr, 'QB_TE': qb_te, 'QB_WR_TE': qb_wr_te, 'QB_RB_WR_TE': qb_flex},
             'qb_stacks_opp': {'QB_RB_OPP': qb_rb_opp, 'QB_WR_OPP': qb_wr_opp, 'QB_TE_OPP': qb_te_opp},
@@ -159,7 +160,7 @@ def display_game_button_logos():
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
     for i, (t, o) in enumerate(games.items()):
-        with cols[i % 6 + 1].container(border=True, height=82, gap=None, horizontal_alignment='right', vertical_alignment='center'):
+        with cols[i % 6 + 1].container(border=True, height=82, gap=None, vertical_alignment='center', horizontal_alignment='right'):
             t_ab = t if len(t) == 3 else t + '&nbsp;&nbsp;'
             o_ab = o if len(o) == 3 else o + '&nbsp;&nbsp;'
             col_cb1, col_cb2 = st.columns([2,3])
@@ -174,7 +175,7 @@ def display_game_button_logos():
         if i == len(games)-1 and len(games) < 12:
             for n in range(11-i):
                 c = (i+1+n) % 6 + 1
-                with cols[c].container(border=True, height=82, horizontal_alignment='right', vertical_alignment='center'):
+                with cols[c].container(border=True, height=82, vertical_alignment='center', horizontal_alignment='right'):
                     col_cf1, col_cf2 = st.columns([2,3])
                     col_cf1.caption('🏈  \n🏈')
                     col_cf2.empty()
@@ -217,13 +218,13 @@ def display_players_queue(players_df, position_filter, selected_value):
         key="data_editor_key", 
         on_change=sync_edits,
         use_container_width=True)
-    return st.session_state.edited_df
+    return(st.session_state.edited_df)
 
 def display_lineup(lineup_df):
     with st.container():
         lineup_placeholder = st.empty() 
         lineup_placeholder.dataframe(lineup_df, column_config={'NAME': st.column_config.Column(width=134)}, height=352, hide_index=True, use_container_width=True)
-    return lineup_placeholder
+    return(lineup_placeholder)
 
 def lock_player_errors():
     errors = []
@@ -267,7 +268,7 @@ def customize_constraints(input_controls, edited_df):
         if value:
             abbr = key[3:5]
             team_constraints['qb_stacks_opposing'].append(abbr) 
-    return team_constraints, player_pos_constraints
+    return(team_constraints, player_pos_constraints)
 
 def optimize_dk_players(dk_players, team_constraints, player_pos_constraints):
     prob = LpProblem('Optimize', LpMaximize)
@@ -295,7 +296,7 @@ def optimize_dk_players(dk_players, team_constraints, player_pos_constraints):
             rem_sal -= dk_players[player]['salary']
     total_proj = pulp.value(prob.objective)  
     status = LpStatus[prob.status]
-    return results, rem_sal, total_proj, status
+    return(results, rem_sal, total_proj, status)
 
 def optimizer_team_constraints(dk_players, player_vars, prob, team_constraints):
     if team_constraints['flex_team']: 
@@ -341,6 +342,6 @@ def display_results(results, lineup_df):
                 final_lineup.at[flex_row[0], "TEAM"] = results[player]['team']
                 final_lineup.at[flex_row[0], "PROJ"] = results[player]['projection']
                 final_lineup.at[flex_row[0], "SAL"] = results[player]['salary']
-    return final_lineup
+    return(final_lineup)
 
 run_app()
