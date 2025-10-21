@@ -32,7 +32,7 @@ def run_app():
     load_streamlit(dk_players, players_df, lineup_df)
 
 def fetch_sleeper_projections():
-    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/7?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
+    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/8?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
     json_sleeper_data = json.loads(sleeper_API.text)    
     sleeper_players = {}
     for item in json_sleeper_data:
@@ -44,7 +44,7 @@ def fetch_sleeper_projections():
     return(sleeper_players)
 
 def fetch_dk_players(sleeper_players): 
-    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/135374/draftables')
+    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/134062/draftables')
     json_dk_data = json.loads(dk_API.text)
     dk_players = {}
     for index, item in enumerate(json_dk_data['draftables']):
@@ -59,7 +59,8 @@ def fetch_dk_players(sleeper_players):
                 'FFPG': item['draftStatAttributes'][0]['value'], 
                 'OPRK': item['draftStatAttributes'][1]['value'], 
                 'salary': item['salary'], 
-                'projection':0
+                'projection':0,
+                'status': item['status']
             }}
             if item['displayName'] in sleeper_players:
                 info[str(index)]['projection'] = sleeper_players[item['displayName']]
@@ -197,10 +198,14 @@ def display_players_queue(players_df, position_filter, selected_value):
     else: 
         filtered_df = st.session_state.players_df.copy()   
     if selected_value:
-        filtered_df = st.session_state.players_df[st.session_state.players_df['name'] == selected_value].copy() 
+        filtered_df = st.session_state.players_df[st.session_state.players_df['name'] == selected_value].copy()     
+    visible_columns = [col for col in players_df.columns if col != 'status']
+    filtered_df["name"] = players_df.apply(
+    lambda row: f"{row['name']} ({row['status'][0]})" if row['status'] != "None" else row['name'],
+    axis=1)
     with st.container():
         st.session_state.edited_df = st.data_editor(
-        filtered_df,
+        filtered_df[visible_columns],
         height=632,
         hide_index=True,
         column_config={
