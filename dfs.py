@@ -84,7 +84,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
     col_a, col_b, col_c = st.columns([24,2,12])
     with col_a:
         selected_value, position_filter = display_queue_filters(players_df)
-        edited_df = display_players_queue(players_df, position_filter, selected_value)
+        display_players_queue(players_df, position_filter, selected_value)
     col_b.empty()
     with col_c:
         input_controls = display_input_controls()
@@ -94,7 +94,7 @@ def load_streamlit(dk_players, players_df, lineup_df):
         col_h.empty()
         col_i.write(f"**Projection**  \n**Rem. Salary**")
         if col_g.button('Optimize', use_container_width=True, type="primary"):
-            team_constraints, player_pos_constraints = customize_constraints(input_controls, edited_df)
+            team_constraints, player_pos_constraints = customize_constraints(input_controls)
             results, rem_sal, total_proj, status = optimize_dk_players(dk_players, team_constraints, player_pos_constraints)
             final_lineup = display_results(results, lineup_df)
             if status != 'Optimal':
@@ -200,9 +200,7 @@ def display_players_queue(players_df, position_filter, selected_value):
     if selected_value:
         filtered_df = st.session_state.players_df[st.session_state.players_df['name'] == selected_value].copy()     
     visible_columns = [col for col in players_df.columns if col != 'status']
-    filtered_df["name"] = players_df.apply(
-    lambda row: f"{row['name']} ({row['status'][0]})" if row['status'] != "None" else row['name'],
-    axis=1)
+    filtered_df["name"] = players_df.apply(lambda row: f"{row['name']} ({row['status'][0]})" if row['status'] != "None" else row['name'], axis=1)
     with st.container():
         st.session_state.edited_df = st.data_editor(
         filtered_df[visible_columns],
@@ -223,7 +221,6 @@ def display_players_queue(players_df, position_filter, selected_value):
         key="data_editor_key", 
         on_change=sync_edits,
         use_container_width=True)
-    return(st.session_state.edited_df)
 
 def display_lineup(lineup_df):
     with st.container():
@@ -233,7 +230,7 @@ def display_lineup(lineup_df):
 
 def lock_player_errors():
     errors = []
-    edited_df = st.session_state.edited_df
+    edited_df = st.session_state.players_df
     edited_df.loc[edited_df["lock"], "exclude"] = False
     if len(edited_df[edited_df["lock"]]) > 9:
         errors.append("❌ You can’t lock more than 9 players.")    
@@ -247,7 +244,7 @@ def lock_player_errors():
     for e in errors: 
         st.error(e)  
 
-def customize_constraints(input_controls, edited_df):    
+def customize_constraints(input_controls):    
     team_constraints = {
         'qb_stacks': [],
         'qb_stacks_opposing': [],
@@ -257,8 +254,8 @@ def customize_constraints(input_controls, edited_df):
         'flex_team': input_controls['flex_team']
     }    
     player_pos_constraints = {
-        'include': edited_df[edited_df['lock']].index.tolist(), 
-        'exclude': edited_df[edited_df['exclude']].index.tolist(),
+        'include': st.session_state.players_df[st.session_state.players_df['lock']].index.tolist(), 
+        'exclude': st.session_state.players_df[st.session_state.players_df['exclude']].index.tolist(),
         'flex_req': input_controls['flex_req']
     }
     for key, value in input_controls['qb_stacks_team'].items():
