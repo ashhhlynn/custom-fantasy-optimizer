@@ -18,7 +18,6 @@ def run_app():
     players_df = pd.DataFrame.from_dict(dk_players, orient='index')
     players_df['lock'] = False
     players_df['exclude'] = False
-    print(dk_players)
     load_streamlit(dk_players, players_df, teams, games, logos)
 
 def load_streamlit(dk_players, players_df, teams, games, logos):
@@ -45,10 +44,10 @@ def load_streamlit(dk_players, players_df, teams, games, logos):
             if status != 'Optimal':
                 st.warning('Error: Optimal solution not found.')
             with col_j:
-                st.write(round(total_proj, 1), "  \n", rem_sal)
+                st.write(round(total_proj, 1), '  \n', rem_sal)
         else:
             with col_j:
-                st.write(0.00, "  \n", 50000)
+                st.write(0.00, '  \n', 50000)
 
 def display_game_button_logos(games, logos):
     cols = st.columns(8) 
@@ -58,11 +57,11 @@ def display_game_button_logos(games, logos):
         with cols[i % 6 + 1].container(border=True, height=82, gap=None, vertical_alignment='center', horizontal_alignment='right'):
             t_abbr = t if len(t) == 3 else t + '&nbsp;&nbsp;'
             o_abbr = o if len(o) == 3 else o + '&nbsp;&nbsp;'
-            col_cb1, col_cb2 = st.columns([2,3])
-            with col_cb1:
+            col_b1, col_b2 = st.columns([2,3])
+            with col_b1:
                 st.image(logos[t], width=16)
                 st.image(logos[o], width=16)
-            if col_cb2.button(f'**{t_abbr}  \n{o_abbr}**', type='tertiary'):
+            if col_b2.button(f"**{t_abbr}  \n{o_abbr}**", type='tertiary'):
                 if st.session_state.selected_game == [t, o]:            
                     st.session_state.selected_game = 'All Games'
                 else: 
@@ -71,9 +70,9 @@ def display_game_button_logos(games, logos):
             for n in range(11-i):
                 c = (i+1+n) % 6 + 1
                 with cols[c].container(border=True, height=82, vertical_alignment='center', horizontal_alignment='right'):
-                    col_cf1, col_cf2 = st.columns([2,3])
-                    col_cf1.caption('🏈  \n🏈')
-                    col_cf2.empty()
+                    col_b3, col_b4 = st.columns([2,3])
+                    col_b3.caption('🏈  \n🏈')
+                    col_b4.empty()
 
 def display_queue_filters(players_df):
     col_a1, col_a2, col_a3 = st.columns([3,1,2])
@@ -136,12 +135,12 @@ def display_input_controls(teams):
         col_c2.write('⚙️')
         with st.expander('Team Stacks'):
             st.caption('Require 2 players from the same team:')
-            col_s1, col_s2 = st.columns(2)
-            with col_s1:
+            col_c3, col_c4 = st.columns(2)
+            with col_c3:
                 qb_rb = st.checkbox('QB + RB')
                 qb_wr = st.checkbox('QB + WR')
                 qb_te = st.checkbox('QB + TE')
-            with col_s2:     
+            with col_c4:     
                 qb_wr_te = st.checkbox('QB + WR/TE')
                 qb_flex = st.checkbox('QB + FLEX')
                 dst_rb = st.checkbox('RB + DST')
@@ -150,9 +149,9 @@ def display_input_controls(teams):
             qb_rb_opp = st.checkbox('QB + RB', key='rb_opp')
             qb_wr_opp = st.checkbox('QB + WR', key='wr_opp')
             qb_te_opp = st.checkbox('QB + TE', key='te_opp')
-        col_f1, col_f2 = st.columns([32,20], vertical_alignment='bottom')
-        flex_input = col_f1.segmented_control('FLEX Position and Team (Incl.)', ['RB', 'WR', 'TE'], selection_mode='single')
-        flex_team_input = col_f2.selectbox('Flex Team', (teams.keys()), placeholder='Team', label_visibility='collapsed', index=None)        
+        col_c5, col_c6 = st.columns([32,20], vertical_alignment='bottom')
+        flex_input = col_c5.segmented_control('FLEX Position and Team (Incl.)', ['RB', 'WR', 'TE'], selection_mode='single')
+        flex_team_input = col_c6.selectbox('Flex Team', (teams.keys()), placeholder='Team', label_visibility='collapsed', index=None)        
         dst_excl = st.toggle('Exclude Players Opposing DST')
         rb_max = st.toggle('Maximum 1 RB per Team')
         input_controls = {
@@ -170,13 +169,13 @@ def lock_player_errors():
     errors = []
     edited_df = st.session_state.players_df
     edited_df.loc[edited_df['lock'], 'exclude'] = False
-    if len(edited_df[edited_df["lock"]]) > 9:
+    if len(edited_df[edited_df['lock']]) > 9:
         errors.append('❌ You can’t lock more than 9 players.')    
-    flex_count = edited_df[edited_df["lock"]]["position"].isin(["RB", "WR", "TE"]).sum()
+    flex_count = edited_df[edited_df['lock']]['position'].isin(['RB', 'WR', 'TE']).sum()
     if flex_count > 7:
-        errors.append("❌ You can’t lock more than 7 FLEX eligible players.")
+        errors.append('❌ You can’t lock more than 7 FLEX eligible players.')
     for pos, caps in position_bounds.items():
-        pos_count = (edited_df[edited_df["lock"]]["position"] == pos).sum()
+        pos_count = (edited_df[edited_df['lock']]['position'] == pos).sum()
         if pos_count > caps['max']:
             errors.append(f"❌ You can’t lock more than {caps['max']} {pos}(s).")
     for e in errors: 
@@ -191,19 +190,19 @@ def display_lineup():
 def display_results(results):
     final_lineup = lineup_df.copy()    
     for player in results:
-        row = final_lineup[(final_lineup["POS"] == results[player]['position']) & (final_lineup["NAME"] == "")].index
+        row = final_lineup[(final_lineup['POS'] == results[player]['position']) & (final_lineup['NAME'] == '')].index
         if len(row) > 0:
-            final_lineup.at[row[0], "NAME"] = results[player]['name'] 
-            final_lineup.at[row[0], "TEAM"] = results[player]['team']
-            final_lineup.at[row[0], "PROJ"] = results[player]['projection'] 
-            final_lineup.at[row[0], "SAL"] = results[player]['salary']
+            final_lineup.at[row[0], 'NAME'] = results[player]['name'] 
+            final_lineup.at[row[0], 'TEAM'] = results[player]['team']
+            final_lineup.at[row[0], 'PROJ'] = results[player]['projection'] 
+            final_lineup.at[row[0], 'SAL'] = results[player]['salary']
         else:
-            flex_row = final_lineup[(final_lineup["POS"] == "FLEX") & (final_lineup["NAME"] == "")].index
+            flex_row = final_lineup[(final_lineup['POS'] == 'FLEX') & (final_lineup['NAME'] == '')].index
             if len(flex_row) > 0 and results[player]['position'] in ['RB', 'WR', 'TE']:
-                final_lineup.at[flex_row[0], "NAME"] = results[player]['name']
-                final_lineup.at[flex_row[0], "TEAM"] = results[player]['team']
-                final_lineup.at[flex_row[0], "PROJ"] = results[player]['projection']
-                final_lineup.at[flex_row[0], "SAL"] = results[player]['salary']
+                final_lineup.at[flex_row[0], 'NAME'] = results[player]['name']
+                final_lineup.at[flex_row[0], 'TEAM'] = results[player]['team']
+                final_lineup.at[flex_row[0], 'PROJ'] = results[player]['projection']
+                final_lineup.at[flex_row[0], 'SAL'] = results[player]['salary']
     return(final_lineup)
 
 run_app()

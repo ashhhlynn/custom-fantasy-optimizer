@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 def fetch_player_data():
     dk_sports_API = requests.get('https://www.draftkings.com/lobby/getcontests?sport=nfl')
     json_dk_sports_data = json.loads(dk_sports_API.text)
-    classic_contest = next((contest for contest in json_dk_sports_data['Contests'] if contest.get("gameType") == 'Classic'), None)
+    classic_contest = next((contest for contest in json_dk_sports_data['Contests'] if contest.get('gameType') == 'Classic'), None)
     dg = classic_contest['dg']
     today = datetime.now(timezone.utc)
     sept_first = datetime(today.year, 9, 1, tzinfo=timezone.utc)
@@ -16,7 +16,7 @@ def fetch_player_data():
     return(dk_players, teams)
 
 def fetch_sleeper_projections(week):
-    sleeper_API = requests.get(f'https://api.sleeper.app/projections/nfl/2025/{week}?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
+    sleeper_API = requests.get(f"https://api.sleeper.app/projections/nfl/2025/{week}?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr")
     json_sleeper_data = json.loads(sleeper_API.text)    
     sleeper_players = {}
     for item in json_sleeper_data:
@@ -28,7 +28,7 @@ def fetch_sleeper_projections(week):
     return(sleeper_players)
 
 def fetch_dk_players(sleeper_players, dg): 
-    dk_API = requests.get(f'https://api.draftkings.com/draftgroups/v1/draftgroups/{dg}/draftables')
+    dk_API = requests.get(f"https://api.draftkings.com/draftgroups/v1/draftgroups/{dg}/draftables")
     json_dk_data = json.loads(dk_API.text)
     dk_players = {}
     teams = {}   
