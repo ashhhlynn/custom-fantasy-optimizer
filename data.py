@@ -1,8 +1,22 @@
 import requests
 import json
+from datetime import datetime, timedelta, timezone
 
-def fetch_sleeper_projections():
-    sleeper_API = requests.get('https://api.sleeper.app/projections/nfl/2025/8?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
+def fetch_player_data():
+    dk_sports_API = requests.get('https://www.draftkings.com/lobby/getcontests?sport=nfl')
+    json_dk_sports_data = json.loads(dk_sports_API.text)
+    classic_contest = next((contest for contest in json_dk_sports_data['Contests'] if contest.get("gameType") == 'Classic'), None)
+    dg = classic_contest['dg']
+    today = datetime.now(timezone.utc)
+    sept_first = datetime(today.year, 9, 1, tzinfo=timezone.utc)
+    first_monday = sept_first + timedelta(days=(7 - sept_first.weekday()) % 7)
+    week = ((today - first_monday).days // 7) + 1
+    sleeper_players = fetch_sleeper_projections(week)       
+    dk_players, teams = fetch_dk_players(sleeper_players, dg)
+    return(dk_players, teams)
+
+def fetch_sleeper_projections(week):
+    sleeper_API = requests.get(f'https://api.sleeper.app/projections/nfl/2025/{week}?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr')
     json_sleeper_data = json.loads(sleeper_API.text)    
     sleeper_players = {}
     for item in json_sleeper_data:
@@ -13,11 +27,11 @@ def fetch_sleeper_projections():
             sleeper_players.update({item['player']['first_name'] + ' ' + item['player']['last_name']: projection})
     return(sleeper_players)
 
-def fetch_dk_players(sleeper_players): 
-    dk_API = requests.get('https://api.draftkings.com/draftgroups/v1/draftgroups/134062/draftables')
+def fetch_dk_players(sleeper_players, dg): 
+    dk_API = requests.get(f'https://api.draftkings.com/draftgroups/v1/draftgroups/{dg}/draftables')
     json_dk_data = json.loads(dk_API.text)
     dk_players = {}
-    team_games = {}    
+    teams = {}   
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90 and (index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']):
             parts = item['competition']['name'].split('@')
@@ -30,7 +44,7 @@ def fetch_dk_players(sleeper_players):
                 'FFPG': item['draftStatAttributes'][0]['value'], 
                 'OPRK': item['draftStatAttributes'][1]['value'], 
                 'salary': item['salary'], 
-                'projection':0,
+                'projection': 0,
                 'status': item['status']
             }}
             if item['displayName'] in sleeper_players:
@@ -40,15 +54,15 @@ def fetch_dk_players(sleeper_players):
                 if short in sleeper_players:
                     info[str(index)]['projection'] = sleeper_players[short]
             dk_players.update(info)
-            if item['position'] == 'DST' and item['teamAbbreviation'] not in team_games:
-                team_games.update({item['teamAbbreviation']: opponent})            
-    return(dk_players, team_games)
+            if item['position'] == 'DST' and item['teamAbbreviation'] not in teams:
+                teams.update({item['teamAbbreviation']: opponent})            
+    return(dk_players, teams)
 
-def get_games_logos(team_games):
+def get_games_logos(teams):
     games = {}
     logos = {}
-    for team, opponent in team_games.items():
+    for team, opponent in teams.items():
+        logos.update({team: f'https://a.espncdn.com/i/teamlogos/nfl/500/{team.lower()}.png'})
         if opponent not in games:
             games.update({team: opponent})
-        logos.update({team: f"https://a.espncdn.com/i/teamlogos/nfl/500/{team.lower()}.png"})
     return(games, logos)

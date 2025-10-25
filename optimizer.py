@@ -9,50 +9,18 @@ position_bounds = {
     'DST': {'min': 1, 'max': 1}
 } 
 
-def customize_constraints(input_controls):    
-    team_constraints = {
-        'qb_stacks': [],
-        'qb_stacks_opposing': [],
-        'RB_DST': input_controls['RB_DST'],
-        'dst_exclude_opp': input_controls['dst_exclude_opp'],
-        'rb_max': input_controls['rb_max'],
-        'flex_team': input_controls['flex_team']
-    }    
-    player_pos_constraints = {
-        'include': st.session_state.players_df[st.session_state.players_df['lock']].index.tolist(), 
-        'exclude': st.session_state.players_df[st.session_state.players_df['exclude']].index.tolist(),
-        'flex_req': input_controls['flex_req']
-    }
-    for key, value in input_controls['qb_stacks_team'].items():
-        if key == 'QB_WR_TE' and value:
-            team_constraints['qb_stacks'].append('WR_TE') 
-        elif key == 'QB_RB_WR_TE' and value:
-            team_constraints['qb_stacks'].append('FLEX') 
-        elif value:
-            abbr = key[3:5]
-            team_constraints['qb_stacks'].append(abbr) 
-    for key, value in input_controls['qb_stacks_opp'].items():
-        if value:
-            abbr = key[3:5]
-            team_constraints['qb_stacks_opposing'].append(abbr) 
-    return(team_constraints, player_pos_constraints)
-
-def optimize_dk_players(dk_players, teams, team_constraints, player_pos_constraints):
+def optimize_dk_players(dk_players, teams, input_controls):
     prob = LpProblem('Optimize', LpMaximize)
     player_vars = LpVariable.dicts('Select', dk_players.keys(), 0, 1, cat='Binary')
-    prob += lpSum(dk_players[p]["salary"] * player_vars[p] for p in dk_players) <= 50000
+    prob += lpSum(dk_players[p]['salary'] * player_vars[p] for p in dk_players) <= 50000
     prob += lpSum(player_vars[p] for p in dk_players) == 9  
-    prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ["RB", "WR", "TE"]) == 7  
+    prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['position'] in ['RB', 'WR', 'TE']) == 7  
     for pos, bound in position_bounds.items():
         prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) <= bound['max']
         prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == pos]) >= bound['min']
-    if player_pos_constraints['flex_req']:
-        prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == player_pos_constraints['flex_req']]) == position_bounds[player_pos_constraints['flex_req']]['max']       
-    for p in player_pos_constraints['include']:
-        player_vars[p].lowBound = 1
-    for p in player_pos_constraints['exclude']:
-        player_vars[p].upBound = 0
-    optimizer_team_constraints(dk_players, teams, player_vars, prob, team_constraints)
+    optimize_custom_player_constraints(dk_players, player_vars, prob, input_controls)
+    team_constraints = customize_constraint_vars(input_controls)
+    optimize_custom_team_constraints(dk_players, teams, player_vars, prob, team_constraints)
     prob += lpSum(dk_players[p]["projection"] * player_vars[p] for p in dk_players)
     prob.solve()
     results = {}
@@ -65,7 +33,40 @@ def optimize_dk_players(dk_players, teams, team_constraints, player_pos_constrai
     status = LpStatus[prob.status]
     return(results, rem_sal, total_proj, status)
 
-def optimizer_team_constraints(dk_players, teams, player_vars, prob, team_constraints):
+def optimize_custom_player_constraints(dk_players, player_vars, prob, input_controls):
+    if input_controls['flex_req']:
+        prob += lpSum([player_vars[p] for p in dk_players if dk_players[p]['position'] == input_controls['flex_req']]) == position_bounds[input_controls['flex_req']]['max']       
+    include = st.session_state.players_df[st.session_state.players_df['lock']].index.tolist()
+    exclude = st.session_state.players_df[st.session_state.players_df['exclude']].index.tolist()
+    for p in include:
+        player_vars[p].lowBound = 1
+    for p in exclude:
+        player_vars[p].upBound = 0
+
+def customize_constraint_vars(input_controls):    
+    team_constraints = {
+        'qb_stacks': [],
+        'qb_stacks_opposing': [],
+        'RB_DST': input_controls['RB_DST'],
+        'dst_exclude_opp': input_controls['dst_exclude_opp'],
+        'rb_max': input_controls['rb_max'],
+        'flex_team': input_controls['flex_team']
+    }        
+    for key, value in input_controls['qb_stacks_team'].items():
+        if key == 'QB_WR_TE' and value:
+            team_constraints['qb_stacks'].append('WR_TE') 
+        elif key == 'QB_RB_WR_TE' and value:
+            team_constraints['qb_stacks'].append('FLEX') 
+        elif value:
+            abbr = key[3:5]
+            team_constraints['qb_stacks'].append(abbr) 
+    for key, value in input_controls['qb_stacks_opp'].items():
+        if value:
+            abbr = key[3:5]
+            team_constraints['qb_stacks_opposing'].append(abbr) 
+    return(team_constraints)
+
+def optimize_custom_team_constraints(dk_players, teams, player_vars, prob, team_constraints):
     if team_constraints['flex_team']: 
         prob += lpSum(player_vars[p] for p in dk_players if dk_players[p]['team'] == team_constraints['flex_team'] and dk_players[p]['position'] in ["RB", "WR", "TE"]) >= 1  
     for team in teams:         
