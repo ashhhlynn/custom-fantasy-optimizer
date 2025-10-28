@@ -1,7 +1,7 @@
 import pandas as pd 
 import streamlit as st 
 from streamlit_searchbox import st_searchbox
-from data import fetch_player_data, get_games_logos
+from data import fetch_player_data
 from optimizer import position_bounds, optimize_dk_players
 
 lineup_df = pd.DataFrame({
@@ -13,15 +13,14 @@ lineup_df = pd.DataFrame({
 }) 
 
 def run_app():
-    dk_players, teams = fetch_player_data()
-    games, logos = get_games_logos(teams)
+    dk_players, teams, games, logos = fetch_player_data()
     players_df = pd.DataFrame.from_dict(dk_players, orient='index')
     players_df['lock'] = False
     players_df['exclude'] = False
     load_streamlit(dk_players, players_df, teams, games, logos)
 
 def load_streamlit(dk_players, players_df, teams, games, logos):
-    st.set_page_config(layout='wide')           
+    st.set_page_config(layout='wide')
     display_game_button_logos(games, logos)
     st.markdown(' ')
     st.markdown(' ')    
