@@ -35,9 +35,6 @@
 4) Uses PuLP to maximize projected points under DraftKings salary and roster rules
 5) Displays the optimized lineup through Streamlit UI
 
-### Media
-Coming Soon! 
-
 ### Setup 
    ```sh
    $ git clone https://github.com/ashhhlynn/custom-fantasy-optimizer.git

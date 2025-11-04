@@ -6,14 +6,18 @@ def fetch_player_data():
     dk_sports_API = requests.get('https://www.draftkings.com/lobby/getcontests?sport=nfl')
     json_dk_sports_data = json.loads(dk_sports_API.text)
     classic_contest = next((contest for contest in json_dk_sports_data['Contests'] if contest.get('gameType') == 'Classic'), None)
-    dg = classic_contest['dg']
+    dg = classic_contest['dg'] 
+    week = get_current_nfl_week()
+    sleeper_players = fetch_sleeper_projections(week)       
+    dk_players, teams, games, logos = fetch_dk_players(sleeper_players, dg)
+    return(dk_players, teams, games, logos)
+
+def get_current_nfl_week():
     today = datetime.now()
     sept_first = datetime(today.year, 9, 1)
     first_monday = sept_first + timedelta(days=(7 - sept_first.weekday()) % 7)
     week = ((today - first_monday).days // 7) + 1
-    sleeper_players = fetch_sleeper_projections(week)       
-    dk_players, teams, games, logos = fetch_dk_players(sleeper_players, dg)
-    return(dk_players, teams, games, logos)
+    return(week)
 
 def fetch_sleeper_projections(week):
     sleeper_API = requests.get(f"https://api.sleeper.app/projections/nfl/2025/{week}?season_type=regular&position%5B%5D=DEF&position%5B%5D=K&position%5B%5D=RB&position%5B%5D=QB&position%5B%5D=TE&position%5B%5D=WR&order_by=ppr")

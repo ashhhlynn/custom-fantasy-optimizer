@@ -28,18 +28,21 @@ def load_streamlit(dk_players, players_df, teams, games, logos):
     with col_a:
         selected_value, position_filter = display_queue_filters(players_df)
         display_players_queue(players_df, position_filter, selected_value)
-    col_b.empty()
     with col_c:
         input_controls = display_input_controls(teams)
         lock_player_errors()
         lineup_placeholder = display_lineup()
         col_g, col_h, col_i, col_j = st.columns([6,3,5,3], vertical_alignment='center')
-        col_h.empty()
         col_i.write(f"**Projection**  \n**Rem. Salary**")
         if col_g.button('Optimize', use_container_width=True, type='primary'):
             results, rem_sal, total_proj, status = optimize_dk_players(dk_players, teams, input_controls)
             final_lineup = display_results(results)
-            lineup_placeholder.dataframe(final_lineup, height=352, column_config={'NAME': st.column_config.Column(width=134)}, hide_index=True, use_container_width=True)
+            lineup_placeholder.dataframe(
+                final_lineup, 
+                height=352, 
+                column_config={'SAL': st.column_config.NumberColumn(format='$%d'), 'NAME': st.column_config.Column(width=134)}, 
+                hide_index=True, 
+                use_container_width=True, )
             if status != 'Optimal':
                 st.warning('Error: Optimal solution not found.')
             with col_j:
@@ -71,7 +74,6 @@ def display_game_button_logos(games, logos):
                 with cols[c].container(border=True, height=82, vertical_alignment='center', horizontal_alignment='right'):
                     col_b3, col_b4 = st.columns([2,3])
                     col_b3.caption('🏈  \n🏈')
-                    col_b4.empty()
 
 def display_queue_filters(players_df):
     col_a1, col_a2, col_a3 = st.columns([3,1,2])
@@ -82,7 +84,6 @@ def display_queue_filters(players_df):
             results = players_df[players_df['name'].str.contains(searchterm, case=False)]
             return(results['name'].tolist())            
         selected_value = st_searchbox(search_data, placeholder='Search', key='search_key')
-    col_a2.empty()
     position_filter = col_a3.selectbox('Filters', ('All', 'QB', 'RB', 'WR', 'TE', 'DST'), label_visibility='collapsed')   
     return(selected_value, position_filter)
 
@@ -105,7 +106,7 @@ def display_players_queue(players_df, position_filter, selected_value):
     if selected_value:
         filtered_df = st.session_state.players_df[st.session_state.players_df['name'] == selected_value].copy()     
     visible_columns = [col for col in players_df.columns if col != 'status']
-    filtered_df['name'] = players_df.apply(lambda row: f"{row['name']} ({row['status'][0]})" if row['status'] != 'None' else row['name'], axis=1)
+    filtered_df['name'] = players_df.apply(lambda row: f"{row['name']} ({row['status']})" if row['status'] != 'None' else row['name'], axis=1)
     with st.container():
         st.session_state.edited_df = st.data_editor(
         filtered_df[visible_columns],
@@ -119,7 +120,7 @@ def display_players_queue(players_df, position_filter, selected_value):
             "FFPG": st.column_config.Column("FFPG", disabled=True),
             "OPRK": st.column_config.Column("OPRK", disabled=True),
             "projection": st.column_config.Column("PROJ", disabled=True),
-            "salary": st.column_config.Column("SAL", disabled=True),
+            "salary": st.column_config.NumberColumn("SAL", format="$%d", disabled=True),
             "lock": st.column_config.CheckboxColumn("🔐"),
             "exclude": st.column_config.CheckboxColumn("🚫")
         },

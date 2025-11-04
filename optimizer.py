@@ -47,7 +47,7 @@ def add_custom_team_constraints(dk_players, teams, player_vars, prob, input_cont
         if any(input_controls['qb_stacks_team'].values()) or any(input_controls['qb_stacks_opp'].values()):
             add_qb_stack_constraints(dk_players, player_vars, prob, input_controls, teams, team)
         if input_controls['RB_DST'] or input_controls['rb_max'] or input_controls['dst_exclude_opp']: 
-            dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == "DST"])
+            dst = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'DST'])
             rb = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == 'RB'])  
             if input_controls['RB_DST'] == True:
                 prob += lpSum(rb) >= lpSum(dst)
@@ -65,11 +65,9 @@ def add_qb_stack_constraints(dk_players, player_vars, prob, input_controls, team
             positions = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] in pos_arr])
             prob += lpSum(positions) >= lpSum(qb)
         elif value:
-            abbr = pos[3:5]
-            position = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == abbr])  
+            position = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == team and dk_players[k]['position'] == pos[3:5]])  
             prob += lpSum(position) >= lpSum(qb)
     for pos_opp, value in input_controls['qb_stacks_opp'].items():
         if value:
-            abbr_opp = pos_opp[3:5]
-            position_opp = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == teams[team] and dk_players[k]['position'] == abbr_opp])  
+            position_opp = lpSum([player_vars[k] for k in dk_players if dk_players[k]['team'] == teams[team] and dk_players[k]['position'] == pos_opp[3:5]])  
             prob += lpSum(position_opp) >= lpSum(qb)
