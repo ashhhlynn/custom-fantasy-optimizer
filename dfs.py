@@ -117,7 +117,7 @@ def display_players_queue(players_df, position_filter, selected_value):
             "position": st.column_config.Column("POS", disabled=True),
             "team": st.column_config.Column("TEAM", disabled=True),
             "opp": st.column_config.Column("OPP", disabled=True),
-            "FFPG": st.column_config.Column("FFPG", disabled=True),
+            "FPPG": st.column_config.Column("FPPG", disabled=True),
             "OPRK": st.column_config.Column("OPRK", disabled=True),
             "projection": st.column_config.Column("PROJ", disabled=True),
             "salary": st.column_config.NumberColumn("SAL", format="$%d", disabled=True),

@@ -42,16 +42,17 @@ def fetch_dk_players(sleeper_players, dg):
         if item['draftStatAttributes'][0].get('id') == 90 and (index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']):
             parts = item['competition']['name'].split('@')
             opponent = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
+            injury = 'O' if item['status'] == 'OUT' else item['status']
             info = {str(index): {
                 'name': item['displayName'],
                 'position': item['position'], 
                 'team': item['teamAbbreviation'], 
                 'opp': opponent, 
-                'FFPG': item['draftStatAttributes'][0]['value'], 
+                'FPPG': item['draftStatAttributes'][0]['value'], 
                 'OPRK': item['draftStatAttributes'][1]['value'], 
                 'salary': item['salary'], 
                 'projection': 0,
-                'status': item['status']
+                'status': injury
             }}
             if item['displayName'] in sleeper_players:
                 info[str(index)]['projection'] = sleeper_players[item['displayName']]
