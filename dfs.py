@@ -51,7 +51,7 @@ def load_streamlit(dk_players, players_df, teams, games, logos):
             with col_j:
                 st.write(0.00, '  \n', 50000)
 
-def display_game_button_logos(games, logos):
+def display_game_button_logos(games, logos):    
     cols = st.columns(8) 
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
@@ -71,9 +71,7 @@ def display_game_button_logos(games, logos):
         if i == len(games)-1 and len(games) < 12:
             for n in range(11-i):
                 c = (i+1+n) % 6 + 1
-                with cols[c].container(border=True, height=82, vertical_alignment='center', horizontal_alignment='right'):
-                    col_b3, col_b4 = st.columns([2,3])
-                    col_b3.caption('🏈  \n🏈')
+                cols[c].container(border=True, height=82, vertical_alignment='center', horizontal_alignment='right')
 
 def display_queue_filters(players_df):
     col_a1, col_a2, col_a3 = st.columns([3,1,2])
@@ -104,7 +102,7 @@ def display_players_queue(players_df, position_filter, selected_value):
     else: 
         filtered_df = st.session_state.players_df.copy()   
     if selected_value:
-        filtered_df = st.session_state.players_df[st.session_state.players_df['name'] == selected_value].copy()     
+        filtered_df = st.session_state.players_df[st.session_state.players_df['name'] == selected_value].copy()
     visible_columns = [col for col in players_df.columns if col != 'status']
     filtered_df['name'] = players_df.apply(lambda row: f"{row['name']} ({row['status']})" if row['status'] != 'None' else row['name'], axis=1)
     with st.container():

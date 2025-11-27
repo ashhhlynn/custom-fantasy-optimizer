@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 def fetch_player_data():
     dk_sports_API = requests.get('https://www.draftkings.com/lobby/getcontests?sport=nfl')
     json_dk_sports_data = json.loads(dk_sports_API.text)
-    classic_contest = next((contest for contest in json_dk_sports_data['Contests'] if contest.get('gameType') == 'Classic'), None)
+    classic_contest = next((contest for contest in json_dk_sports_data['Contests'] if contest.get('gameType') == 'Classic' and contest.get('sdstring', '')[:3] == 'Sun'), None)
     dg = classic_contest['dg'] 
     week = get_current_nfl_week()
     sleeper_players = fetch_sleeper_projections(week)       
@@ -41,8 +41,8 @@ def fetch_dk_players(sleeper_players, dg):
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90 and (index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']):
             parts = item['competition']['name'].split('@')
-            opponent = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
             injury = 'O' if item['status'] == 'OUT' else item['status']
+            opponent = parts[0].strip() if parts[1].strip() == item['teamAbbreviation'] else parts[1].strip() 
             info = {str(index): {
                 'name': item['displayName'],
                 'position': item['position'], 
@@ -51,7 +51,7 @@ def fetch_dk_players(sleeper_players, dg):
                 'FPPG': item['draftStatAttributes'][0]['value'], 
                 'OPRK': item['draftStatAttributes'][1]['value'], 
                 'salary': item['salary'], 
-                'projection': 0,
+                'projection': 0,    
                 'status': injury
             }}
             if item['displayName'] in sleeper_players:
