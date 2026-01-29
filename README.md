@@ -17,6 +17,13 @@
 - Pandas
 - Streamlit
 
+### How It Works
+1) Fetches player pool for Sunday Classic contests from DraftKings API
+2) Fetches PPR projections from Sleeper API and matches to player
+3) Lets you interactively adjust constraints (locks, exclusions, stacks, position limits)
+4) Uses PuLP to maximize projected points under DraftKings salary and roster rules
+5) Displays the optimized lineup via Streamlit UI
+
 ### Features
 - Interactive sortable queue and lineup tables  
 - Lock or exclude players from your lineup 
@@ -28,12 +35,10 @@
 - Set limit of 1 RB per team
 - Optimizes highest projected lineup with PuLP
 
-### How It Works
-1) Fetches player pool for Sunday Classic contests from DraftKings API
-2) Fetches PPR projections from Sleeper API and matches to player
-3) Lets you interactively adjust constraints (locks, exclusions, stacks, position limits)
-4) Uses PuLP to maximize projected points under DraftKings salary and roster rules
-5) Displays the optimized lineup through Streamlit UI
+### Media
+<img style="width:80%; height:80%" alt="Screenshot (130)" src="https://github.com/user-attachments/assets/270d2278-bd2e-487a-870a-7b9c1ce481f4" />
+
+<img style="width:80%; height:80%" alt="Screenshot (144)" src="https://github.com/user-attachments/assets/6f2d28ec-64a4-4d0c-a379-89dfdea84687" />
 
 ### Setup 
    ```sh
