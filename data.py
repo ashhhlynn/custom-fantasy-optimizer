@@ -1,6 +1,7 @@
 import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import pytz
 
 def fetch_player_data():
     dk_sports_API = requests.get('https://www.draftkings.com/lobby/getcontests?sport=nfl')
@@ -14,8 +15,8 @@ def fetch_player_data():
         week = nfl_week
         dg = classic_contest['dg']     
     sleeper_players = fetch_sleeper_projections(week)       
-    dk_players, teams, games, logos = fetch_dk_players(sleeper_players, dg)
-    return(dk_players, teams, games, logos)
+    dk_players, teams, games, logos, game_times = fetch_dk_players(sleeper_players, dg)
+    return(dk_players, teams, games, logos, game_times)
 
 def get_current_nfl_week():
     today = datetime.now()
@@ -43,6 +44,7 @@ def fetch_dk_players(sleeper_players, dg):
     teams = {}   
     games = {}
     logos = {}
+    game_times = {}
     for index, item in enumerate(json_dk_data['draftables']):
         if item['draftStatAttributes'][0].get('id') == 90 and (index == 0 or item['playerId'] != json_dk_data['draftables'][index - 1]['playerId']):
             parts = item['competition']['name'].split('@')
@@ -71,4 +73,9 @@ def fetch_dk_players(sleeper_players, dg):
                 logos.update({item['teamAbbreviation']: f"https://a.espncdn.com/i/teamlogos/nfl/500/{item['teamAbbreviation'].lower()}.png"})
                 if opponent not in games:
                     games.update({item['teamAbbreviation']: opponent})
-    return(dk_players, teams, games, logos)
+                    dt = item['competition']['startTime'].split(".")[0] + "Z"
+                    dt_utc = datetime.strptime(dt, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                    central_time = dt_utc.astimezone(pytz.timezone('America/Chicago'))
+                    formatted_time = central_time.strftime('%b %d, %I:%M')
+                    game_times.update({item['teamAbbreviation']: formatted_time})
+    return(dk_players, teams, games, logos, game_times)

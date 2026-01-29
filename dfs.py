@@ -13,15 +13,15 @@ lineup_df = pd.DataFrame({
 }) 
 
 def run_app():
-    dk_players, teams, games, logos = fetch_player_data()
+    dk_players, teams, games, logos, game_times = fetch_player_data()
     players_df = pd.DataFrame.from_dict(dk_players, orient='index')
     players_df['lock'] = False
     players_df['exclude'] = False
-    load_streamlit(dk_players, players_df, teams, games, logos)
+    load_streamlit(dk_players, players_df, teams, games, logos, game_times)
 
-def load_streamlit(dk_players, players_df, teams, games, logos):
+def load_streamlit(dk_players, players_df, teams, games, logos, game_times):
     st.set_page_config(layout='wide')
-    display_game_button_logos(games, logos)
+    display_game_button_logos(games, logos, game_times)
     st.markdown(' ')
     st.markdown(' ')    
     col_a, col_b, col_c = st.columns([24,2,12])
@@ -51,7 +51,7 @@ def load_streamlit(dk_players, players_df, teams, games, logos):
             with col_j:
                 st.write(0.00, '  \n', 50000)
 
-def display_game_button_logos(games, logos):    
+def display_game_button_logos(games, logos, game_times):    
     cols = st.columns(9) 
     if 'selected_game' not in st.session_state:
         st.session_state.selected_game = 'All Games'  
@@ -68,6 +68,7 @@ def display_game_button_logos(games, logos):
                     st.session_state.selected_game = 'All Games'
                 else: 
                     st.session_state.selected_game = [t, o]  
+            # st.caption(game_times[t])
         if i == len(games)-1 and len(games) < 12:
             for n in range(11-i):
                 c = (i+1+n) % 7 + 1
@@ -129,7 +130,7 @@ def display_players_queue(players_df, position_filter, selected_value):
 def display_input_controls(teams):
     with st.container(border=True):
         col_c1, col_c2 = st.columns([10,1])
-        col_c1.write('**Customize**')
+        col_c1.write('**Optimizer**')
         col_c2.write('⚙️')
         with st.expander('Team Stacks'):
             st.caption('Require 2 players from the same team:')
@@ -148,10 +149,10 @@ def display_input_controls(teams):
             qb_wr_opp = st.checkbox('QB + WR', key='wr_opp')
             qb_te_opp = st.checkbox('QB + TE', key='te_opp')
         col_c5, col_c6 = st.columns([32,20], vertical_alignment='bottom')
-        flex_input = col_c5.segmented_control('FLEX Position and Team (Incl.)', ['RB', 'WR', 'TE'], selection_mode='single')
-        flex_team_input = col_c6.selectbox('Flex Team', (teams.keys()), placeholder='Team', label_visibility='collapsed', index=None)        
-        dst_excl = st.toggle('Exclude Players Opposing DST')
-        rb_max = st.toggle('Maximum 1 RB per Team')
+        flex_input = col_c5.segmented_control('Customize FLEX', ['RB', 'WR', 'TE'], selection_mode='single')
+        flex_team_input = col_c6.selectbox('Flex Team', (teams.keys()), placeholder='Team 1+', label_visibility='collapsed', index=None)        
+        dst_excl = st.toggle('Exclude Opponent Defense')
+        rb_max = st.toggle('Limit 1 RB per Team')
         input_controls = {
             'qb_stacks_team': {'QB_RB': qb_rb, 'QB_WR': qb_wr, 'QB_TE': qb_te, 'QB_WR_TE': qb_wr_te, 'QB_RB_WR_TE': qb_flex},
             'qb_stacks_opp': {'QB_RB_OPP': qb_rb_opp, 'QB_WR_OPP': qb_wr_opp, 'QB_TE_OPP': qb_te_opp},
