@@ -7,7 +7,7 @@
   </tr>
 </table> 
 
-#### :link: <a href="https://custom-fantasy-optimizer.streamlit.app/">Website</a></b>
+#### :link: <a href="https://custom-fantasy-optimizer.streamlit.app/">Dashboard</a></b>
 
 ### Technologies
 - Python 3.8+
