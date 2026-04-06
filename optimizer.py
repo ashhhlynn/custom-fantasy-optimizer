@@ -26,7 +26,9 @@ def optimize_dk_players(dk_players, teams, input_controls):
     rem_sal = 50000
     for player in dk_players:
         if player_vars[player].varValue == 1:
-            results[player_vars[player]] = dk_players[player]
+            results[player_vars[player]] = dk_players[player].copy()
+            results[player_vars[player]]['projection'] = str(results[player_vars[player]]['projection'])
+            results[player_vars[player]]['salary'] = str(results[player_vars[player]]['salary'])
             rem_sal -= dk_players[player]['salary']
     return(results, rem_sal, pulp.value(prob.objective), LpStatus[prob.status])
 
