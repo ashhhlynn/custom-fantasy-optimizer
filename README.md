@@ -2,7 +2,7 @@
 <table>
   <tr>
     <td>
-    Customizable fantasy football lineup optimizer built with Python and PuLP linear programming. Optimize DraftKings lineups with adjustable player locks, exclusions, stacking, and position controls for the highest projection under contest roster and salary rules.
+    Customizable fantasy football optimizer built with Python and PuLP linear programming. Optimizes DFS lineups for the highest projection under contest roster and salary rules, including configurable player locks, exclusions, stacking, and position controls. 
     </td>
   </tr>
 </table> 
@@ -19,12 +19,12 @@
 
 ### How It Works
 1) Fetches player pool for Sunday Classic contests from DraftKings API
-2) Fetches PPR projections from Sleeper API and matches to player
-3) Lets you interactively adjust constraints (locks, exclusions, stacks, position limits)
-4) Uses PuLP to maximize projected points under DraftKings salary and roster rules
-5) Displays the optimized lineup via Streamlit UI
+2) Fetches PPR projections from Sleeper API matched to player
+3) Allows interactive customization of constraints (locks, exclusions, stacks, position limits)
+4) Uses PuLP to maximize projected points under contest roster and salary rules
+5) Dashboard displays the optimized lineup
 
-### Customization
+### Constraint Customization
 - Lock or exclude players from your lineup 
 - Require at least 1 FLEX from a specified team 
 - QB + RB/WR/TE stacks (same team or opposing)
